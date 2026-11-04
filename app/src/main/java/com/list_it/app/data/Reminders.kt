@@ -3,14 +3,13 @@ package com.list_it.app.data
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -36,12 +35,11 @@ object Reminders {
     fun init(context: Context, prefs: Prefs) {
         this.context = context.applicationContext
         this.prefs = prefs
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.reminder_channel_name),
-            NotificationManager.IMPORTANCE_HIGH,
-        )
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        // Channels only exist from API 26; the Compat builder is a no-op below that.
+        val channel = NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_HIGH)
+            .setName(context.getString(R.string.reminder_channel_name))
+            .build()
+        NotificationManagerCompat.from(context).createNotificationChannel(channel)
     }
 
     /** Schedules (or replaces) the reminder for a task. Returns an error message on failure. */

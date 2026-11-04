@@ -1,5 +1,6 @@
 package com.list_it.app.data
 
+import android.os.Build
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 
@@ -8,12 +9,20 @@ import com.google.mlkit.genai.prompt.Generation
  * on-device Foundation Models used by the iOS app. Nothing leaves the device.
  */
 object OnDeviceModel {
+    /**
+     * ML Kit GenAI requires API 26; the app supports API 24. Nothing here may touch [Generation]
+     * below that, or loading the class throws an Error that the AI error handling cannot catch.
+     */
+    private val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+
     private val model by lazy { Generation.getClient() }
 
     /** True when the device supports on-device generation (iOS `SystemLanguageModel.availability`). */
     suspend fun isAvailable(): Boolean =
-        runCatching { model.checkStatus() != FeatureStatus.UNAVAILABLE }.getOrDefault(false)
+        supported && runCatching { model.checkStatus() != FeatureStatus.UNAVAILABLE }.getOrDefault(false)
 
-    suspend fun respond(prompt: String): String =
-        model.generateContent(prompt).candidates.firstOrNull()?.text.orEmpty()
+    suspend fun respond(prompt: String): String {
+        check(supported) { "On-device AI needs Android 8.0 or newer." }
+        return model.generateContent(prompt).candidates.firstOrNull()?.text.orEmpty()
+    }
 }

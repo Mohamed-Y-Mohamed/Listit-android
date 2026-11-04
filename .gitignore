@@ -1,45 +1,17 @@
-# Compiled class file
-*.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-
-# Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
-.kotlin/
-# ---- Android / Gradle
 .gradle/
+.kotlin/
 build/
 local.properties
 .idea/
 *.iml
 .DS_Store
-captures/
-.externalNativeBuild/
-.cxx/
-# Gradle wrapper must stay in the repo
-!gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*.log
 
-# ---- Secrets — never commit
-secrets.properties
 keystore.properties
 *.jks
 *.keystore
+
+# Signed artifacts and R8 mappings written by the Android Studio release wizard
+app/release/
+*.aab
+*.apk

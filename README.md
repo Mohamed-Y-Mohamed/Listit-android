@@ -13,7 +13,7 @@ backend as the iOS and web apps.
 1. Open the `ListIt` folder in Android Studio (Narwhal or newer) and let Gradle sync.
 2. Run the `app` configuration on a device or emulator.
 
-Supabase URL and anon key live in `secrets.properties` (git-ignored). Copy `secrets.properties.example` to `secrets.properties` and fill in `SUPABASE_URL` and `SUPABASE_KEY`, or set them as environment variables.
+Supabase URL and anon key live in `gradle.properties` (`SUPABASE_URL`, `SUPABASE_KEY`).
 
 ## Tests
 
@@ -39,8 +39,29 @@ Supabase URL and anon key live in `secrets.properties` (git-ignored). Copy `secr
    ./gradlew bundleRelease
    ```
    Output: `app/build/outputs/bundle/release/app-release.aab`
+
+   Without `keystore.properties` this fails with an explicit error instead of producing an
+   unsigned bundle that Play rejects on upload. Once an app is live on Play the upload key can
+   never change, so use the same keystore every release.
 4. In Play Console, enable Play App Signing, upload the `.aab`, and add a privacy policy URL
    (required because the app has accounts) plus the Data safety form (email, name, user content).
+5. Upload `app/build/outputs/mapping/release/mapping.txt` alongside the bundle, or release
+   crash reports stay obfuscated.
+
+## Minimum SDK
+
+`minSdk` is 24 (Android 7.0), which constrains three things:
+
+- `java.time` only entered the platform at API 26, so core library desugaring is enabled in
+  `app/build.gradle.kts`. Do not turn it off.
+- ML Kit's GenAI Prompt API declares `minSdk 26`. It is force-enabled via `tools:overrideLibrary`
+  in the manifest, and `OnDeviceModel` refuses to touch the library below API 26 so the class is
+  never loaded on a device that cannot support it.
+- Adaptive icons live in `mipmap-anydpi-v26/`; API 24–25 falls back to the plain PNGs in the
+  density buckets.
+
+Run `./gradlew :app:lintDebug` after touching any of these — lint's `NewApi` check is what proves
+the app still runs on API 24.
 
 ## Store assets
 

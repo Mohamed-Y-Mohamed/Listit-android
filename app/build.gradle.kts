@@ -7,28 +7,27 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Release signing: create keystore.properties (see README). Not committed to source control.
+val keystoreFile = rootProject.file("keystore.properties")
+
+// The Android Studio signing wizard injects its own keystore instead of using keystore.properties.
+val hasInjectedSigning = providers.gradleProperty("android.injected.signing.store.file").isPresent
+
 android {
     namespace = "com.list_it.app"
     compileSdk = 37
 
     defaultConfig {
         applicationId = "com.list_it.app"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.5.0"
+        versionCode = 14
+        versionName = "1.4.0"
 
-        // Supabase credentials come from secrets.properties (git-ignored) or the
-        // SUPABASE_URL / SUPABASE_KEY environment variables, never from source control.
-        val secretsFile = rootProject.file("secrets.properties")
-        val secrets = Properties().apply { if (secretsFile.exists()) secretsFile.inputStream().use(::load) }
-        fun secret(name: String): String = secrets.getProperty(name) ?: System.getenv(name) ?: ""
-        buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"${secret("SUPABASE_KEY")}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${property("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"${property("SUPABASE_KEY")}\"")
     }
 
-    // Release signing: create keystore.properties (see README). Not committed to source control.
-    val keystoreFile = rootProject.file("keystore.properties")
     signingConfigs {
         if (keystoreFile.exists()) {
             val keys = Properties().apply { keystoreFile.inputStream().use(::load) }
@@ -52,6 +51,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // java.time is only in the platform from API 26; the app ships to API 24.
+        isCoreLibraryDesugaringEnabled = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
@@ -67,7 +68,23 @@ android {
     }
 }
 
+// Without a signing config, release packaging quietly succeeds and produces an unsigned artifact
+// that Play rejects on upload. Fail at the point of packaging instead of shipping the surprise.
+if (!keystoreFile.exists() && !hasInjectedSigning) {
+    tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+        doFirst {
+            throw GradleException(
+                "No release signing config. Copy keystore.properties.example to keystore.properties " +
+                    "and point storeFile at the upload keystore (see README). " +
+                    "Unsigned release artifacts cannot be installed or uploaded to Play."
+            )
+        }
+    }
+}
+
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.compose.icons.extended)
