@@ -33,9 +33,9 @@ fun ColumnScope.DescriptionTransformSheet(
     initialDescription: String,
     mode: AIFeatureMode,
     dismiss: () -> Unit,
+    manager: FoundationModelManager = remember { FoundationModelManager() },
     onApply: ((String) -> Unit)?,
 ) {
-    val manager = remember { FoundationModelManager() }
     val scope = rememberCoroutineScope()
     var customPromptInput by remember { mutableStateOf("") }
 

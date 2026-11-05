@@ -24,7 +24,7 @@ enum class AIFeatureMode(val title: String) {
     REFINE("Refine & Polish"),
 
     // Note AI features
-    NOTE_OUTLINE("Generate Outline"),
+    NOTE_OUTLINE("Outline"),
     NOTE_TEMPLATE("Smart Template"),
     NOTE_BRAINSTORM("Brainstorm"),
     SUMMARISE("Summarise"),

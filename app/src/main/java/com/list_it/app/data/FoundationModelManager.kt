@@ -1,16 +1,25 @@
 package com.list_it.app.data
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.google.mlkit.genai.common.GenAiException
 import com.list_it.app.model.AIFeatureMode
 import kotlinx.coroutines.CancellationException
 
-/** On-device AI prompts and state, identical to the iOS `FoundationModelManager`. */
-class FoundationModelManager {
+/**
+ * On-device AI prompts and state, identical to the iOS `FoundationModelManager`.
+ * [respond] is the model call; tests swap it for a fake.
+ */
+class FoundationModelManager(
+    private val respond: suspend (prompt: String, onPreparing: () -> Unit) -> String = OnDeviceModel::respond,
+) {
     var aiResponse by mutableStateOf("")
     var isGenerating by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
+    /** True while Gemini Nano downloads before its first use. */
+    var isPreparingModel by mutableStateOf(false)
 
     // MARK: - General Content Generation
     suspend fun generateSmartContent(userInput: String, mode: AIFeatureMode) {
@@ -80,21 +89,54 @@ class FoundationModelManager {
         executeSession(prompt(target))
     }
 
+    /** Clears the previous result, e.g. when the user switches AI mode. */
+    fun reset() {
+        if (isGenerating) return
+        aiResponse = ""
+        errorMessage = null
+    }
+
     private fun setGeneratingState(generating: Boolean) {
         isGenerating = generating
-        if (generating) errorMessage = null
+        if (generating) {
+            errorMessage = null
+            isPreparingModel = false
+        }
     }
 
     private suspend fun executeSession(prompt: String) {
         try {
-            aiResponse = OnDeviceModel.respond(prompt).trim()
+            val text = respond(prompt) { isPreparingModel = true }.trim()
+            if (text.isEmpty()) errorMessage = "The AI didn't return anything. Try rephrasing your request."
+            else aiResponse = text
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            errorMessage = "Failed to process locally: ${e.message}"
+            Log.w("FoundationModelManager", "On-device generation failed", e)
+            errorMessage = friendlyMessage(e)
         } finally {
             isGenerating = false
+            isPreparingModel = false
         }
+    }
+}
+
+/** Turns ML Kit failures into messages a user can act on, instead of raw exception text. */
+internal fun friendlyMessage(e: Throwable): String {
+    // Never touch ML Kit classes below API 26 (see OnDeviceModel.supported).
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return "On-device AI isn't available on this device."
+    val code = (e as? GenAiException)?.errorCode
+    return when (code) {
+        GenAiException.ErrorCode.NOT_AVAILABLE, GenAiException.ErrorCode.NOT_SUPPORTED, GenAiException.ErrorCode.AICORE_INCOMPATIBLE ->
+            "On-device AI isn't available on this device."
+        GenAiException.ErrorCode.NEEDS_SYSTEM_UPDATE -> "On-device AI needs a system update. Check for updates in Settings and try again."
+        GenAiException.ErrorCode.NOT_ENOUGH_DISK_SPACE -> "There isn't enough free storage to download the AI model. Free up some space and try again."
+        GenAiException.ErrorCode.BUSY -> "The AI is busy right now. Please try again in a moment."
+        GenAiException.ErrorCode.PER_APP_BATTERY_USE_QUOTA_EXCEEDED -> "AI use is paused to save battery. Please try again later."
+        GenAiException.ErrorCode.BACKGROUND_USE_BLOCKED -> "Keep List It open while the AI is working, then try again."
+        GenAiException.ErrorCode.REQUEST_TOO_LARGE -> "That text is too long for the on-device AI. Try a shorter description."
+        GenAiException.ErrorCode.REQUEST_TOO_SMALL -> "Add a little more detail and try again."
+        else -> "Something went wrong while generating. Please try again."
     }
 }
 

@@ -26,8 +26,11 @@ import kotlinx.coroutines.launch
 
 /** iOS `CreateTaskAIView`: breaks a task down or builds a deep plan. */
 @Composable
-fun ColumnScope.CreateTaskAISheet(dismiss: () -> Unit, onInsert: ((String) -> Unit)?) {
-    val manager = remember { FoundationModelManager() }
+fun ColumnScope.CreateTaskAISheet(
+    dismiss: () -> Unit,
+    manager: FoundationModelManager = remember { FoundationModelManager() },
+    onInsert: ((String) -> Unit)?,
+) {
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var mode by remember { mutableStateOf(AIFeatureMode.BREAKDOWN) }
@@ -53,8 +56,11 @@ fun ColumnScope.CreateTaskAISheet(dismiss: () -> Unit, onInsert: ((String) -> Un
 
 /** iOS `CreateNoteAIView`: outline, template or brainstorm for a note. */
 @Composable
-fun ColumnScope.CreateNoteAISheet(dismiss: () -> Unit, onInsert: ((String) -> Unit)?) {
-    val manager = remember { FoundationModelManager() }
+fun ColumnScope.CreateNoteAISheet(
+    dismiss: () -> Unit,
+    manager: FoundationModelManager = remember { FoundationModelManager() },
+    onInsert: ((String) -> Unit)?,
+) {
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var mode by remember { mutableStateOf(AIFeatureMode.NOTE_OUTLINE) }
@@ -82,7 +88,7 @@ fun ColumnScope.CreateNoteAISheet(dismiss: () -> Unit, onInsert: ((String) -> Un
         placeholder = when (mode) {
             AIFeatureMode.NOTE_OUTLINE -> "e.g., History of the UK"
             AIFeatureMode.NOTE_TEMPLATE -> "e.g., 1-on-1 meeting with manager"
-            else -> "e.g., Feature ideas for an iOS habit tracker"
+            else -> "e.g., Feature ideas for a habit tracker app"
         },
         buttonTitle = when (mode) {
             AIFeatureMode.NOTE_OUTLINE -> "Generate Outline"
@@ -116,10 +122,12 @@ private fun AISheetLayout(
     trigger: () -> Unit,
     onApply: () -> Unit,
 ) {
-    val hasOutput = manager.aiResponse.isNotEmpty() || manager.errorMessage != null
+    // Shown while regenerating or downloading the model too, so the result area never goes blank.
+    val hasOutput = manager.aiResponse.isNotEmpty() || manager.errorMessage != null || manager.isPreparingModel
     IosTopBar("AI Assistant", leading = { BarButton("Dismiss", onClick = dismiss) })
     Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        SegmentedControl(modes, mode, { it.title }, onMode)
+        // A result for one mode is meaningless under another, so switching clears it.
+        SegmentedControl(modes, mode, { it.title }) { if (it != mode) { manager.reset(); onMode(it) } }
         IosDivider()
         AIPromptInput(heading, placeholder, input, onInput, buttonTitle, busyTitle, manager.isGenerating, trigger)
         if (hasOutput) {

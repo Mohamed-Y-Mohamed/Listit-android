@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -116,14 +117,27 @@ fun AIOutputSection(
     }
     val error = manager.errorMessage
     when {
-        manager.isGenerating -> if (loadingText != null) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        manager.isGenerating -> AICard {
+            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), color = IosColor.orange, strokeWidth = 2.dp)
                 Spacer(Modifier.width(10.dp))
-                Text(loadingText, style = IosFont.subheadline, color = palette.secondary)
+                Text(
+                    if (manager.isPreparingModel) "Downloading the on-device AI model. This only happens once…" else loadingText ?: "Generating…",
+                    style = IosFont.subheadline,
+                    color = palette.secondary,
+                )
             }
         }
-        error != null -> Text(error, style = IosFont.subheadline, color = IosColor.red)
+        error != null -> AICard {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Outlined.ErrorOutline, null, tint = IosColor.red, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(error, style = IosFont.subheadline, color = palette.primary)
+                }
+                TintedButton("Try Again", Icons.Filled.Refresh, IosColor.orange, Modifier.fillMaxWidth(), onClick = onRegenerate)
+            }
+        }
         manager.aiResponse.isNotEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             AICard { SelectionContainer { MarkdownText(manager.aiResponse) } }
             if (applyTitle != null && onApply != null) {
@@ -175,7 +189,7 @@ fun AIMenuView(editedDescription: String, onSelect: (AIFeatureMode) -> Unit) {
     ) { close ->
         MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted, enabled = enabled) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
         MenuItem("Refine Description", Icons.Filled.AutoAwesome, enabled = enabled) { close(); onSelect(AIFeatureMode.REFINE) }
-        MenuItem("Summarise description", Icons.Filled.Summarize, enabled = enabled) { close(); onSelect(AIFeatureMode.SUMMARISE) }
+        MenuItem("Summarise Description", Icons.Filled.Summarize, enabled = enabled) { close(); onSelect(AIFeatureMode.SUMMARISE) }
         MenuItem("Custom Prompt", Icons.Outlined.ChatBubbleOutline, enabled = enabled) { close(); onSelect(AIFeatureMode.CUSTOM) }
     }
 }

@@ -9,14 +9,17 @@ import com.list_it.app.ui.theme.LocalPalette
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
+import com.mikepenz.markdown.model.rememberMarkdownState
 
 /** Renders markdown (iOS MarkdownUI `Markdown`). */
 @Composable
 fun MarkdownText(content: String, modifier: Modifier = Modifier, fontSize: Int = 17) {
     val palette = LocalPalette.current
     val body = IosFont.body.copy(fontSize = fontSize.sp, lineHeight = (fontSize + 6).sp, color = palette.primary)
+    // Parse during composition: the default background parse draws one empty frame first,
+    // which showed as a blank card flashing before AI output and note text appeared.
     Markdown(
-        content = content,
+        markdownState = rememberMarkdownState(content, immediate = true),
         modifier = modifier,
         colors = markdownColor(text = palette.primary),
         typography = markdownTypography(

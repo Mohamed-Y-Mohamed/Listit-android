@@ -2,7 +2,9 @@ package com.list_it.app.data
 
 import android.os.Build
 import android.util.Log
+import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
+import com.google.mlkit.genai.common.GenAiException
 import com.google.mlkit.genai.prompt.Generation
 
 /**
@@ -30,8 +32,31 @@ object OnDeviceModel {
             .getOrDefault(false)
     }
 
-    suspend fun respond(prompt: String): String {
+    /**
+     * Runs [prompt] on Gemini Nano. A supported device may not have the model yet ("downloadable"),
+     * so the first request downloads it; [onPreparing] fires while that happens.
+     */
+    suspend fun respond(prompt: String, onPreparing: () -> Unit = {}): String {
         check(supported) { "On-device AI needs Android 8.0 or newer." }
+        ensureModelReady(onPreparing)
         return model.generateContent(prompt).candidates.firstOrNull()?.text.orEmpty()
+    }
+
+    private suspend fun ensureModelReady(onPreparing: () -> Unit) {
+        when (model.checkStatus()) {
+            FeatureStatus.AVAILABLE -> return
+            FeatureStatus.UNAVAILABLE -> throw GenAiException("Gemini Nano is not supported on this device", null, GenAiException.ErrorCode.NOT_AVAILABLE)
+            else -> {
+                onPreparing()
+                Log.i(TAG, "Downloading Gemini Nano before the first request")
+                model.download().collect { status ->
+                    when (status) {
+                        is DownloadStatus.DownloadFailed -> throw status.e
+                        is DownloadStatus.DownloadCompleted -> Log.i(TAG, "Gemini Nano download complete")
+                        else -> Unit
+                    }
+                }
+            }
+        }
     }
 }
