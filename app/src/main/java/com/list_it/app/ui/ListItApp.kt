@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
 import com.list_it.app.R
 import com.list_it.app.ui.theme.IosColor
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -125,9 +126,12 @@ private fun MainNavigation() {
             }
         },
     ) { padding ->
+        // Only the tab bar's bottom space is applied here, so only that is consumed; consuming the whole
+        // padding swallowed the status-bar inset and pushed every screen's top bar under the clock and icons.
+        val bottomOnly = PaddingValues(bottom = padding.calculateBottomPadding())
         NavHost(
             nav, startDestination = "lists",
-            modifier = Modifier.padding(bottom = padding.calculateBottomPadding()).consumeWindowInsets(padding),
+            modifier = Modifier.padding(bottomOnly).consumeWindowInsets(bottomOnly),
         ) {
             composable("lists") {
                 AllListsScreen(
