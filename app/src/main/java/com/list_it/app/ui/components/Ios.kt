@@ -33,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
@@ -44,11 +45,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -87,6 +93,12 @@ fun IosTopBar(
     )
 }
 
+/** Icon toolbar button, such as the X that closes a sheet. */
+@Composable
+fun BarIconButton(icon: ImageVector, contentDescription: String, color: Color = MaterialTheme.colorScheme.primary, onClick: () -> Unit) {
+    IconButton(onClick = onClick) { Icon(icon, contentDescription, tint = color, modifier = Modifier.size(22.dp)) }
+}
+
 /** Plain text toolbar button such as "Dismiss", "Save" or "Create". */
 @Composable
 fun BarButton(text: String, bold: Boolean = false, enabled: Boolean = true, color: Color = MaterialTheme.colorScheme.primary, onClick: () -> Unit) {
@@ -103,8 +115,33 @@ fun BarButton(text: String, bold: Boolean = false, enabled: Boolean = true, colo
 // ---------- Sheets ----------
 
 /**
+ * Set by sheet content that holds unsaved edits, so a drag, scrim tap or back press
+ * asks before throwing them away instead of closing silently.
+ */
+class SheetDismissGuard {
+    var hasUnsavedChanges by mutableStateOf(false)
+    internal var confirmVisible by mutableStateOf(false)
+}
+
+val LocalSheetDismissGuard = staticCompositionLocalOf<SheetDismissGuard?> { null }
+
+/**
+ * Tells the enclosing [IosSheet] to confirm before an interactive dismiss while
+ * [hasUnsavedChanges] is true. No-op outside a sheet.
+ */
+@Composable
+fun GuardSheetDismiss(hasUnsavedChanges: Boolean) {
+    val guard = LocalSheetDismissGuard.current ?: return
+    SideEffect { guard.hasUnsavedChanges = hasUnsavedChanges }
+    DisposableEffect(Unit) { onDispose { guard.hasUnsavedChanges = false } }
+}
+
+/**
  * A sheet (iOS `.sheet`). [medium] opens at half height first (iOS `.medium` detent).
  * [dismissible] = false matches `.interactiveDismissDisabled()`.
+ *
+ * Content can drop in [GuardSheetDismiss] to intercept a drag or scrim dismiss while
+ * it holds unsaved edits; the sheet then asks before discarding them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,9 +153,16 @@ fun IosSheet(
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
 ) {
     var allowHide by remember { mutableStateOf(false) }
+    val guard = remember { SheetDismissGuard() }
     val state = rememberModalBottomSheetState(
         skipPartiallyExpanded = !medium,
-        confirmValueChange = { it != SheetValue.Hidden || dismissible || allowHide },
+        confirmValueChange = { value ->
+            when {
+                value != SheetValue.Hidden || allowHide -> true
+                guard.hasUnsavedChanges -> { guard.confirmVisible = true; false }
+                else -> dismissible
+            }
+        },
     )
     val scope = rememberCoroutineScope()
     val dismiss: () -> Unit = {
@@ -126,12 +170,31 @@ fun IosSheet(
         scope.launch { state.hide() }.invokeOnCompletion { onDismiss() }
     }
     ModalBottomSheet(
-        onDismissRequest = { if (dismissible || allowHide) onDismiss() },
+        onDismissRequest = {
+            when {
+                allowHide -> onDismiss()
+                guard.hasUnsavedChanges -> guard.confirmVisible = true
+                dismissible -> onDismiss()
+            }
+        },
         sheetState = state,
         containerColor = background ?: appBackground,
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissible),
     ) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight()) { content(dismiss) }
+        Column(Modifier.fillMaxWidth().fillMaxHeight()) {
+            CompositionLocalProvider(LocalSheetDismissGuard provides guard) { content(dismiss) }
+        }
+        if (guard.confirmVisible) {
+            IosAlert(
+                "Discard changes?",
+                "You have unsaved changes. Closing now will lose them.",
+                onDismiss = { guard.confirmVisible = false },
+                buttons = listOf(
+                    AlertButton("Keep Editing", cancel = true),
+                    AlertButton("Discard", destructive = true) { dismiss() },
+                ),
+            )
+        }
     }
 }
 
@@ -182,12 +245,17 @@ fun ContextMenuBox(
     }
 }
 
-/** A tap-to-open menu (iOS `Menu`). */
+/** A tap-to-open menu (iOS `Menu`). The dropdown anchors to [label], so it opens from there. */
 @Composable
-fun IosMenu(label: @Composable () -> Unit, items: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
+fun IosMenu(
+    label: @Composable () -> Unit,
+    shape: Shape = RoundedCornerShape(8.dp),
+    enabled: Boolean = true,
+    items: @Composable ColumnScope.(close: () -> Unit) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
-        Box(Modifier.clip(RoundedCornerShape(8.dp)).clickable { open = true }) { label() }
+        Box(Modifier.clip(shape).clickable(enabled = enabled) { open = true }) { label() }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) { items { open = false } }
     }
 }
@@ -319,16 +387,17 @@ fun TintedButton(
     textStyle: TextStyle = if (small) IosFont.caption.copy(fontWeight = FontWeight.SemiBold) else IosFont.subheadline,
     minHeight: Dp = if (large) 50.dp else if (small) 28.dp else 36.dp,
     leading: (@Composable () -> Unit)? = null,
-    onClick: () -> Unit,
+    /** null when an enclosing control (such as [IosMenu]) already handles the tap. */
+    onClick: (() -> Unit)? = null,
 ) {
     val bg = if (prominent) tint else tint.copy(alpha = 0.15f)
     val fg = if (prominent) Color.White else tint
-    val shape = if (capsule) CircleShape else RoundedCornerShape(if (large) 14.dp else 10.dp)
+    val shape = if (capsule) CircleShape else RoundedCornerShape(if (large) 18.dp else 14.dp)
     Row(
         modifier
             .clip(shape)
             .background(if (enabled) bg else bg.copy(alpha = bg.alpha * 0.4f))
-            .clickable(enabled = enabled, onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
             .heightIn(min = minHeight)
             .padding(horizontal = if (small) 10.dp else 14.dp),
         horizontalArrangement = Arrangement.Center,

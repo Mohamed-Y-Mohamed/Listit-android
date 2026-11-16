@@ -77,7 +77,7 @@ fun DateChip(label: String, overdue: Boolean) {
 /** Footer buttons: outlined in a colour, or filled for the main action. */
 @Composable
 fun ViewFooterButton(text: String, icon: ImageVector, color: Color, prominent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(14.dp)
     Row(
         Modifier.heightIn(min = 44.dp).alpha(if (enabled) 1f else 0.5f).clip(shape)
             .background(if (prominent) color else color.copy(alpha = 0.10f))

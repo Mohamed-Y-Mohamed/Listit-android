@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -173,23 +174,24 @@ fun AIGenerateButton(title: String = "Write with AI", action: () -> Unit) {
     }
 }
 
-/** "AI Features" menu above a description (iOS `AIMenuView`). */
+/**
+ * "AI Features" menu below a description (iOS `AIMenuView`). Same orange capsule as
+ * [AIGenerateButton] in the create sheets; the dropdown opens from the capsule itself.
+ */
 @Composable
 fun AIMenuView(editedDescription: String, onSelect: (AIFeatureMode) -> Unit) {
     if (!rememberAiAvailable()) return
     val enabled = editedDescription.isNotBlank()
-    IosMenu(
-        label = {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
-                Icon(Icons.Filled.AutoAwesome, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("AI Features", style = IosFont.subheadline, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
-            }
-        },
-    ) { close ->
-        MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted, enabled = enabled) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
-        MenuItem("Refine Description", Icons.Filled.AutoAwesome, enabled = enabled) { close(); onSelect(AIFeatureMode.REFINE) }
-        MenuItem("Summarise Description", Icons.Filled.Summarize, enabled = enabled) { close(); onSelect(AIFeatureMode.SUMMARISE) }
-        MenuItem("Custom Prompt", Icons.Outlined.ChatBubbleOutline, enabled = enabled) { close(); onSelect(AIFeatureMode.CUSTOM) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        IosMenu(
+            label = { TintedButton("AI Features", Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, enabled = enabled) },
+            shape = CircleShape,
+            enabled = enabled,
+        ) { close ->
+            MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
+            MenuItem("Refine Description", Icons.Filled.AutoAwesome) { close(); onSelect(AIFeatureMode.REFINE) }
+            MenuItem("Summarise Description", Icons.Filled.Summarize) { close(); onSelect(AIFeatureMode.SUMMARISE) }
+            MenuItem("Custom Prompt", Icons.Outlined.ChatBubbleOutline) { close(); onSelect(AIFeatureMode.CUSTOM) }
+        }
     }
 }

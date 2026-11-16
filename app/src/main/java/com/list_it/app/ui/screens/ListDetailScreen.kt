@@ -150,8 +150,8 @@ fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
         }
     }
 
-    if (showAddTask) IosSheet(onDismiss = { showAddTask = false }, dismissible = false) { dismiss -> AddTaskSheet(list, dismiss) }
-    if (showAddNote) IosSheet(onDismiss = { showAddNote = false }, dismissible = false) { dismiss -> AddNoteSheet(list, dismiss) }
+    if (showAddTask) IosSheet(onDismiss = { showAddTask = false }) { dismiss -> AddTaskSheet(list, dismiss) }
+    if (showAddNote) IosSheet(onDismiss = { showAddNote = false }) { dismiss -> AddNoteSheet(list, dismiss) }
     if (showAddCollection) IosSheet(onDismiss = { showAddCollection = false }, dismissible = false) { dismiss -> AddCollectionSheet(list, dismiss) }
     if (showTaskInfo) IosSheet(onDismiss = { showTaskInfo = false }) { dismiss -> TaskInfoSheet(dismiss) }
 }
@@ -373,7 +373,7 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
     }
 
     selectedTask?.let { task ->
-        IosSheet(onDismiss = { selectedTask = null }, dismissible = false) { dismiss -> TaskDetailSheet(task, dismiss) }
+        IosSheet(onDismiss = { selectedTask = null }) { dismiss -> TaskDetailSheet(task, dismiss) }
     }
     if (showAlert) {
         if (alertMode == AlertMode.DELETE) {
@@ -499,7 +499,7 @@ private fun NoteListView(collection: ListCollection, searchText: String) {
     }
 
     selectedNote?.let { note ->
-        IosSheet(onDismiss = { selectedNote = null }, dismissible = false) { dismiss -> NoteDetailSheet(note, dismiss) }
+        IosSheet(onDismiss = { selectedNote = null }) { dismiss -> NoteDetailSheet(note, dismiss) }
     }
     if (showAlert) {
         if (alertMode == AlertMode.DELETE) {

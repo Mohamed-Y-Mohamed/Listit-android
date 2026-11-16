@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
@@ -195,15 +194,6 @@ fun DescriptionEditor(text: String, onTextChange: (String) -> Unit, placeholder:
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth().heightIn(min = minHeight.dp).semantics { contentDescription = placeholder },
         )
-    }
-}
-
-/** "Edit" / "Markdown Preview" tabs (iOS `DescriptionModeSwitcher`). */
-@Composable
-fun DescriptionModeSwitcher(isPreview: Boolean, onChange: (Boolean) -> Unit, accent: Color = IosColor.orange) {
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        UnderlineTab("Edit", !isPreview, accent) { onChange(false) }
-        UnderlineTab("Markdown Preview", isPreview, accent) { onChange(true) }
     }
 }
 

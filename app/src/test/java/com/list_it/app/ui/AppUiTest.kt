@@ -357,7 +357,6 @@ class AppUiTest {
         shot("23_note_view")
         click("Edit")
         waitForText("Edit Note")
-        click("Markdown Preview")
         shot("24_note_edit")
         click("Save")
         waitForText("Note Details")

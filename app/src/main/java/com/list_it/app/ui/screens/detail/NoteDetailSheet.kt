@@ -23,11 +23,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
@@ -51,9 +51,10 @@ import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.components.AIMenuView
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.ColorInputView
 import com.list_it.app.ui.components.DescriptionEditor
-import com.list_it.app.ui.components.DescriptionModeSwitcher
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -73,7 +74,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     val db = LocalDb.current
-    val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
     val share = rememberShareAction()
 
@@ -83,15 +83,22 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     var isPinned by remember { mutableStateOf(note.isPinned) }
     var showAlert by remember { mutableStateOf(false) }
     var alertMode by remember { mutableStateOf(AlertMode.ERROR) }
-    var isMarkdownPreview by remember { mutableStateOf(false) }
     var activeAIMode by remember { mutableStateOf<AIFeatureMode?>(null) }
     // Opens to read the note; Edit swaps in the form (web notedetail).
     var isEditing by remember { mutableStateOf(false) }
     val live = db.notes.firstOrNull { it.id == note.id } ?: note
 
-    val collection = db.collections.firstOrNull { it.id == note.collectionID }
-    val accent = collection?.let { colorFromHex(it.bgColorHex) } ?: IosColor.orange
     val shareText = "${note.title}\n\n${note.description.orEmpty()}"
+
+    // A drag or scrim dismiss confirms first while the form holds unsaved edits.
+    GuardSheetDismiss(
+        isEditing && (
+            editedTitle != live.title ||
+                editedDescription != live.description.orEmpty() ||
+                editedHex != live.bgColorHex ||
+                isPinned != live.isPinned
+            ),
+    )
 
     fun saveChanges() {
         if (editedTitle.isBlank()) {
@@ -137,19 +144,8 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
             PlainTextField(editedTitle, { editedTitle = it }, "Note title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
             IosDivider()
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    DescriptionModeSwitcher(isMarkdownPreview, { isMarkdownPreview = it }, accent)
-                    Spacer(Modifier.weight(1f))
-                    AIMenuView(editedDescription) { activeAIMode = it }
-                }
-                if (isMarkdownPreview) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 100.dp).padding(top = 8.dp, start = 5.dp)) {
-                        if (editedDescription.isEmpty()) Text("Nothing to preview", fontSize = 13.sp, color = palette.secondary)
-                        else MarkdownText(editedDescription, fontSize = 13)
-                    }
-                } else {
-                    DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 100)
-                }
+                DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 100)
+                AIMenuView(editedDescription) { activeAIMode = it }
             }
             IosDivider()
             ColorInputView(editedHex) { editedHex = it }
@@ -193,7 +189,7 @@ private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -
     Column(Modifier.fillMaxSize().background(color.copy(alpha = 0.08f))) {
         IosTopBar(
             "Note Details",
-            leading = { BarButton("Dismiss", onClick = onDismiss) },
+            leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {

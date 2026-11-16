@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.PushPin
@@ -62,9 +62,10 @@ import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.components.AIMenuView
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.DateTimeField
 import com.list_it.app.ui.components.DescriptionEditor
-import com.list_it.app.ui.components.DescriptionModeSwitcher
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -97,12 +98,12 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     var editedReminder by remember { mutableStateOf(Instant.now().plusSeconds(3600)) }
     var hasReminder by remember { mutableStateOf(false) }
     var hadPendingReminder by remember { mutableStateOf(false) }
+    var originalReminder by remember { mutableStateOf<Instant?>(null) }
     var lastReminderDate by remember { mutableStateOf<Instant?>(null) }
     var isPinned by remember { mutableStateOf(task.isPinned) }
     var showAlert by remember { mutableStateOf(false) }
     var alertMode by remember { mutableStateOf(AlertMode.ERROR) }
     var statusMessage by remember { mutableStateOf("") }
-    var isMarkdownPreview by remember { mutableStateOf(false) }
     var activeAIMode by remember { mutableStateOf<AIFeatureMode?>(null) }
     // The sheet opens to read the task; Edit swaps in the form (web TasksDetails).
     var isEditing by remember { mutableStateOf(false) }
@@ -123,10 +124,23 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             editedReminder = pending
             hasReminder = true
             hadPendingReminder = true
+            originalReminder = pending
             return@LaunchedEffect
         }
         ReminderStore.date(task.id)?.takeIf { it <= Instant.now() }?.let { lastReminderDate = it }
     }
+
+    // A drag or scrim dismiss confirms first while the form holds unsaved edits.
+    GuardSheetDismiss(
+        isEditing && (
+            editedText != live.text ||
+                editedDescription != live.description.orEmpty() ||
+                isPinned != live.isPinned ||
+                hasDueDate != (live.dueDate != null) ||
+                (hasDueDate && editedDueDate != live.dueDate) ||
+                (if (hasReminder) editedReminder != originalReminder else originalReminder != null)
+            ),
+    )
 
     // keepReminderWithinDueDay()
     LaunchedEffect(editedDueDate, hasDueDate, hasReminder) {
@@ -137,41 +151,49 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         editedReminder = minOf(maxOf(sameTime, Instant.now()), limit)
     }
 
-    fun saveChanges() {
+    /** Validates and writes the form. Returns false when it could not be saved. */
+    suspend fun persistChanges(skipReminder: Boolean = false): Boolean {
         if (editedText.isBlank()) {
             db.setError("Error", "Your Task must have a title.")
             alertMode = AlertMode.ERROR; showAlert = true
-            return
+            return false
         }
-        if (hasReminder && editedReminder <= Instant.now()) {
+        if (!skipReminder && hasReminder && editedReminder <= Instant.now()) {
             db.setError("Reminder", "Please choose a reminder time in the future.")
             alertMode = AlertMode.ERROR; showAlert = true
-            return
+            return false
         }
         val finalDueDate = if (hasDueDate) editedDueDate else null
-        val finalReminder = if (hasReminder) editedReminder else null
-        scope.launch {
-            if (db.updateTask(task, editedText, editedDescription, finalDueDate, isPinned)) {
-                if (finalReminder != null) {
-                    val error = Reminders.schedule(task.id, editedText, finalReminder)
-                    statusMessage = error?.let { "Error: $it" } ?: "Task reminder scheduled for ${Dates.abbreviatedDateTime(finalReminder)}"
-                } else if (hadPendingReminder) {
-                    Reminders.cancel(task.id)
-                    ReminderStore.remove(task.id)
-                }
-                hadPendingReminder = finalReminder != null
-                isEditing = false
-            } else {
-                alertMode = AlertMode.ERROR; showAlert = true
-            }
+        val finalReminder = if (skipReminder) null else if (hasReminder) editedReminder else null
+        if (!db.updateTask(task, editedText, editedDescription, finalDueDate, isPinned)) {
+            alertMode = AlertMode.ERROR; showAlert = true
+            return false
         }
+        if (finalReminder != null) {
+            val error = Reminders.schedule(task.id, editedText, finalReminder)
+            statusMessage = error?.let { "Error: $it" } ?: "Task reminder scheduled for ${Dates.abbreviatedDateTime(finalReminder)}"
+        } else if (hadPendingReminder) {
+            Reminders.cancel(task.id)
+            ReminderStore.remove(task.id)
+        }
+        hadPendingReminder = finalReminder != null
+        originalReminder = finalReminder
+        return true
     }
 
-    fun completeTask() = scope.launch {
+    fun saveChanges() = scope.launch {
+        if (persistChanges()) isEditing = false
+    }
+
+    /** Complete from the edit form: keep the edits, then complete. Completing clears any reminder. */
+    fun saveAndComplete() = scope.launch {
+        if (!persistChanges(skipReminder = true)) return@launch
         if (db.completeTask(task)) {
             Reminders.cancel(task.id)
             dismiss()
-        } else showAlert = true
+        } else {
+            alertMode = AlertMode.ERROR; showAlert = true
+        }
     }
 
     fun cancelEdit() {
@@ -220,19 +242,8 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             PlainTextField(editedText, { editedText = it }, "Task title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
             IosDivider()
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    DescriptionModeSwitcher(isMarkdownPreview, { isMarkdownPreview = it }, accent)
-                    Spacer(Modifier.weight(1f))
-                    AIMenuView(editedDescription) { activeAIMode = it }
-                }
-                if (isMarkdownPreview) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 70.dp).padding(top = 8.dp, start = 5.dp)) {
-                        if (editedDescription.isEmpty()) Text("Nothing to preview", fontSize = 13.sp, color = palette.secondary)
-                        else MarkdownText(editedDescription, fontSize = 13)
-                    }
-                } else {
-                    DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 70)
-                }
+                DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 70)
+                AIMenuView(editedDescription) { activeAIMode = it }
             }
             IosDivider()
 
@@ -284,25 +295,23 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             }
             IosDivider()
 
-            // Actions grid
+            // Secondary actions share one row; Complete owns the row below it.
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TintedButton(if (isPinned) "Unpin" else "Pin", if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, IosColor.orange, Modifier.weight(1f), minHeight = 40.dp) {
                         isPinned = !isPinned
                     }
                     TintedButton("Delete", Icons.Filled.Delete, IosColor.red, Modifier.weight(1f), minHeight = 40.dp) {
                         alertMode = AlertMode.DELETE; showAlert = true
                     }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TintedButton("Add to Calendar", Icons.Filled.EditCalendar, IosColor.blue, Modifier.weight(1f), minHeight = 40.dp) {
+                    TintedButton("Calendar", Icons.Filled.EditCalendar, IosColor.blue, Modifier.weight(1f), minHeight = 40.dp) {
                         addToCalendar(editedText, editedDescription)
                     }
-                    TintedButton(
-                        "Complete", Icons.Filled.CheckCircle, accent, Modifier.weight(1f), prominent = true, minHeight = 40.dp,
-                        textStyle = IosFont.subheadline.copy(fontWeight = FontWeight.SemiBold, color = Color.White),
-                    ) { completeTask() }
                 }
+                TintedButton(
+                    "Complete", Icons.Filled.CheckCircle, IosColor.green, Modifier.fillMaxWidth(), prominent = true, minHeight = 48.dp,
+                    textStyle = IosFont.subheadline.copy(fontWeight = FontWeight.SemiBold, color = Color.White),
+                ) { saveAndComplete() }
             }
         }
     }
@@ -343,7 +352,7 @@ private fun ColumnScope.TaskView(
     Column(Modifier.fillMaxSize().background(accent.copy(alpha = 0.08f))) {
         IosTopBar(
             "Task Details",
-            leading = { BarButton("Dismiss", onClick = onDismiss) },
+            leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -387,7 +396,8 @@ private fun ColumnScope.TaskView(
             ViewFooterButton(if (task.isPinned) "Unpin" else "Pin", if (task.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, ViewColor.warning, onClick = onTogglePin)
             ViewFooterButton("Delete", Icons.Filled.Delete, ViewColor.danger, onClick = onDelete)
             Spacer(Modifier.weight(1f))
-            ViewFooterButton(if (task.isCompleted) "Completed" else "Complete", Icons.Filled.CheckCircle, accent, prominent = true, onClick = onToggleComplete)
+            // Green always means complete, whatever the collection's accent is.
+            ViewFooterButton(if (task.isCompleted) "Completed" else "Complete", Icons.Filled.CheckCircle, ViewColor.success, prominent = true, onClick = onToggleComplete)
         }
     }
 }
