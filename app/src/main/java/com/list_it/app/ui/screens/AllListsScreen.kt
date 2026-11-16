@@ -85,6 +85,8 @@ import com.list_it.app.ui.components.MenuDivider
 import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.components.RequestNotificationPermission
 import com.list_it.app.ui.components.SearchField
+import com.list_it.app.ui.components.SwipeAction
+import com.list_it.app.ui.components.SwipeRevealRow
 import com.list_it.app.ui.components.GridListCard
 import com.list_it.app.ui.components.PinnedListCard
 import com.list_it.app.ui.components.RowListCard
@@ -181,11 +183,13 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
                 }
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                     items(filteredLists, key = { "${it.id}-${it.listName}-${it.bgColorHex}" }) { list ->
-                        // Hold for pin, update and delete; the web build dropped the swipe actions.
-                        ContextMenuBox(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        // Rows swipe left for their actions; the grid above keeps the long press,
+                        // where a horizontal drag would fight the two-column layout.
+                        SwipeRevealRow(
+                            actions = listSwipeActions(list, actions),
                             onClick = { onOpenList(list) },
-                            menu = { close -> ListContextMenu(list, actions, close) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            shape = RowCardShape,
                         ) { RowListCard(list) }
                     }
                 }
@@ -224,6 +228,24 @@ private fun QuickMenu(onCreate: () -> Unit, onQuickAction: (QuickAction) -> Unit
         MenuItem("Completed Tasks", Icons.Outlined.CheckCircle) { close(); onQuickAction(QuickAction.COMPLETED) }
         MenuItem("Not Completed Tasks", Icons.Outlined.Circle) { close(); onQuickAction(QuickAction.NOT_COMPLETED) }
         MenuItem("Overdue Tasks", Icons.Outlined.ErrorOutline) { close(); onQuickAction(QuickAction.OVERDUE) }
+    }
+}
+
+/** Matches the corners RowListCard draws, so the revealed strip is clipped to the card. */
+private val RowCardShape = RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
+
+/** The same three actions as [ListContextMenu]: a default list can only be pinned. */
+private fun listSwipeActions(list: TodoList, actions: ListActions): List<SwipeAction> = buildList {
+    add(
+        SwipeAction(
+            if (list.isPinned) "Unpin" else "Pin",
+            if (list.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+            IosColor.orange,
+        ) { actions.togglePin(list) },
+    )
+    if (!list.isDefault) {
+        add(SwipeAction("Edit", Icons.Filled.Edit, IosColor.blue) { actions.update(list) })
+        add(SwipeAction("Delete", Icons.Filled.Delete, IosColor.red) { actions.delete(list) })
     }
 }
 

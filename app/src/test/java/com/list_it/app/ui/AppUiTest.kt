@@ -14,6 +14,7 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.swipeLeft
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.list_it.app.data.FakeSupabase
@@ -253,6 +254,20 @@ class AppUiTest {
         click("Lists")
         waitForText("Your Lists")
         shot("14_home_rows_velvet")
+
+        // Rows swipe left for Pin, Edit and Delete; the actions sit behind the card.
+        assertEquals(0, compose.onAllNodesWithText("Delete").fetchSemanticsNodes().size)
+        compose.onAllNodesWithText("School")[0].performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        waitForText("Delete")
+        waitForText("Edit")
+        waitForText("Pin")
+        shot("14b_home_row_swiped")
+
+        // Tapping the open row closes it again rather than opening the list.
+        compose.onAllNodesWithText("School")[0].performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Delete").fetchSemanticsNodes().isEmpty() }
+        waitForText("Your Lists")
     }
 
     @Test
