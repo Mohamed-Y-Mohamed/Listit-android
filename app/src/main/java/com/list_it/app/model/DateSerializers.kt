@@ -26,6 +26,7 @@ object SupabaseDates {
     private val plain: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC)
 
+    /** Turns a date written as text (from the database) into a real date. */
     fun parse(value: String): Instant =
         runCatching { OffsetDateTime.parse(value).toInstant() }
             .recoverCatching { OffsetDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSS][.SSS]XXX")).toInstant() }

@@ -60,7 +60,7 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 
-/** iOS `ScheduledView`: month calendar with the tasks due on the selected day. */
+/** A month calendar. Pick a day to see the tasks due on it. */
 @Composable
 fun ScheduledScreen(onBack: () -> Unit) {
     val db = LocalDb.current
@@ -76,6 +76,7 @@ fun ScheduledScreen(onBack: () -> Unit) {
     val isShowingCurrentMonth = displayedMonth == YearMonth.from(today)
     val isViewingToday = isShowingCurrentMonth && selectedDate == today
 
+    /** Moves the calendar forward or back by a number of months. */
     fun changeMonth(by: Long) {
         val newMonth = displayedMonth.plusMonths(by)
         displayedMonth = newMonth
@@ -143,6 +144,7 @@ fun ScheduledScreen(onBack: () -> Unit) {
     }
 }
 
+/** One day on the calendar. A dot underneath means tasks are due that day. */
 @Composable
 private fun DayCell(date: LocalDate, isSelected: Boolean, isToday: Boolean, isPast: Boolean, hasTasks: Boolean, onClick: () -> Unit) {
     val palette = LocalPalette.current
@@ -167,6 +169,7 @@ private fun DayCell(date: LocalDate, isSelected: Boolean, isToday: Boolean, isPa
     }
 }
 
+/** One task due on the selected day. */
 @Composable
 private fun ScheduledTaskRow(task: ToDoTask, modifier: Modifier) {
     val db = LocalDb.current

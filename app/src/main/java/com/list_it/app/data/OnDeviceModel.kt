@@ -42,6 +42,7 @@ object OnDeviceModel {
         return model.generateContent(prompt).candidates.firstOrNull()?.text.orEmpty()
     }
 
+    /** Makes sure the AI model is downloaded and ready, downloading it the first time if needed. */
     private suspend fun ensureModelReady(onPreparing: () -> Unit) {
         when (model.checkStatus()) {
             FeatureStatus.AVAILABLE -> return

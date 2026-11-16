@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens.creating
+package com.list_it.app.ui.screens.collection
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.list_it.app.model.ListCollection
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.components.SheetHeader
 import com.list_it.app.ui.components.BarButton
 import com.list_it.app.ui.components.ColorInputView
 import com.list_it.app.ui.components.InputField
@@ -41,7 +42,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
 
-/** iOS `AddCollectionView`. */
+/** The form for adding a new collection (a group of tasks and notes) inside a list. */
 @Composable
 fun ColumnScope.AddCollectionSheet(list: TodoList, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -50,6 +51,7 @@ fun ColumnScope.AddCollectionSheet(list: TodoList, dismiss: () -> Unit) {
     var selectedColorHex by remember { mutableStateOf("") }
     var showAlert by remember { mutableStateOf(false) }
 
+    /** Checks the name isn't empty, then saves the new collection. */
     fun createCollection() {
         if (collectionName.isEmpty()) {
             db.setError("Error", "Please enter a name for your new Collection")

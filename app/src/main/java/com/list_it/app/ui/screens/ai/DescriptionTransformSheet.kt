@@ -27,7 +27,7 @@ import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
 
-/** iOS `DescriptionTransformView`: rewrites, refines, summarises or custom-prompts a description. */
+/** Lets AI rewrite, tidy up or summarise a description, or follow your own instruction. You review the result before it's used. */
 @Composable
 fun ColumnScope.DescriptionTransformSheet(
     initialDescription: String,

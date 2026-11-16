@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 
 private const val PRIVACY_URL = "https://list-it-dom.netlify.app/privacy"
 
-/** iOS `SignUpView` flow, in the web app's Capacitor sign-up design. */
+/** The sign-up page: create an account with your name, email and a password. */
 @Composable
 fun SignUpScreen(onSignIn: () -> Unit) {
     val db = LocalDb.current
@@ -60,6 +60,7 @@ fun SignUpScreen(onSignIn: () -> Unit) {
 
     LaunchedEffect(Unit) { db.resetFields() }
 
+    /** Checks the form, creates the account, then asks you to confirm your email. */
     fun signUp() = scope.launch {
         if (db.name.isEmpty() || db.email.isEmpty() || db.password.isEmpty() || db.confirmPassword.isEmpty()) {
             db.setError("Form incomplete", "All fields must be filled in.")

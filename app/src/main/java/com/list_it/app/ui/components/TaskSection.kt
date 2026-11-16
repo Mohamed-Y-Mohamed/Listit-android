@@ -34,13 +34,13 @@ import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
 
-/** Card background used by the iOS `.ultraThinMaterial` cards. */
+/** Gives a card its frosted background, border and rounded corners. */
 fun Modifier.materialCard(radius: Int, stroke: Color, background: Color): Modifier {
     val shape = RoundedCornerShape(radius.dp)
     return this.clip(shape).background(background).border(1.dp, stroke, shape)
 }
 
-/** A list header with its tasks (iOS `TaskSection`). */
+/** A list's name followed by its tasks, used on the built-in list pages. */
 @Composable
 fun TaskSection(list: TodoList, tasks: List<ToDoTask>, onSelect: (ToDoTask) -> Unit) {
     val palette = LocalPalette.current
@@ -57,6 +57,7 @@ fun TaskSection(list: TodoList, tasks: List<ToDoTask>, onSelect: (ToDoTask) -> U
     }
 }
 
+/** A task card showing its title, description, collection and the date it was created. */
 @Composable
 fun DetailedTaskCard(task: ToDoTask, modifier: Modifier = Modifier) {
     val db = LocalDb.current

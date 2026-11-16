@@ -15,7 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.list_it.app.ui.components.TABS
 import com.list_it.app.ui.components.TabBar
-import com.list_it.app.ui.screens.ProgressScreen
+import com.list_it.app.ui.screens.progress.ProgressScreen
 import com.list_it.app.ui.screens.settings.SettingsScreen
 import com.list_it.app.ui.theme.appBackground
 import androidx.compose.foundation.layout.Arrangement
@@ -41,9 +41,9 @@ import androidx.navigation.navArgument
 import com.list_it.app.data.Prefs
 import com.list_it.app.data.Supabase
 import com.list_it.app.model.QuickAction
-import com.list_it.app.ui.screens.AllListsScreen
-import com.list_it.app.ui.screens.IntroScreen
-import com.list_it.app.ui.screens.ListDetailScreen
+import com.list_it.app.ui.screens.home.AllListsScreen
+import com.list_it.app.ui.screens.onboarding.IntroScreen
+import com.list_it.app.ui.screens.list.ListDetailScreen
 import com.list_it.app.ui.screens.auth.LoginScreen
 import com.list_it.app.ui.screens.auth.SignUpScreen
 import com.list_it.app.ui.screens.defaultlists.CompletedScreen
@@ -59,7 +59,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.first
 
-/** App root (iOS `List_ItApp`): restores the session, then shows the lists or the intro. */
+/** The starting point of the app. Signs you back in if it can, then shows either the home page or the welcome pages. */
 @Composable
 fun ListItApp(db: Supabase, prefs: Prefs) {
     var isAuthenticating by remember { mutableStateOf(true) }
@@ -82,6 +82,7 @@ fun ListItApp(db: Supabase, prefs: Prefs) {
     }
 }
 
+/** The logo and spinner shown while your data loads. */
 @Composable
 private fun LoadingView() {
     Column(
@@ -96,6 +97,7 @@ private fun LoadingView() {
     }
 }
 
+/** For people who aren't signed in: the welcome pages, then sign-up and log-in. */
 @Composable
 private fun AuthNavigation() {
     val nav = rememberNavController()
@@ -106,6 +108,7 @@ private fun AuthNavigation() {
     }
 }
 
+/** The signed-in app: the bottom tabs (Lists, Progress, Settings) and the pages they open. */
 @Composable
 private fun MainNavigation() {
     val nav = rememberNavController()

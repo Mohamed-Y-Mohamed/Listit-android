@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens.creating
+package com.list_it.app.ui.screens.task
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +35,8 @@ import com.list_it.app.model.TodoList
 import com.list_it.app.ui.Dates
 import com.list_it.app.ui.Dates.day
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.components.SheetHeader
+import com.list_it.app.ui.screens.collection.CollectionPickerRow
 import com.list_it.app.ui.components.AIGenerateButton
 import com.list_it.app.ui.components.BarButton
 import com.list_it.app.ui.components.DateTimeField
@@ -54,7 +56,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.util.UUID
 
-/** iOS `AddTaskView`. */
+/** The form for adding a new task: title, description, due date, reminder and collection. */
 @Composable
 fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -82,6 +84,7 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
         reminderDate = minOf(maxOf(sameTimeOnDueDay, Instant.now()), limit)
     }
 
+    /** Checks the form, saves the new task, then sets its reminder if you added one. */
     fun createTask() {
         if (taskTitle.isBlank()) {
             db.setError("Error", "Your task must have a title.")
@@ -119,11 +122,12 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
         IosDivider()
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PlainTextField(taskTitle, { taskTitle = it }, "Task title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
-            DescriptionEditor(taskDescription, { taskDescription = it }, "Description (optional)", minHeight = 70, dimmed = true)
-            AIGenerateButton { showAIView = true }
+            DescriptionEditor(taskDescription, { taskDescription = it }, "Description (optional)", minHeight = 100, dimmed = true) {
+                AIGenerateButton { showAIView = true }
+            }
         }
         IosDivider()
-        TaskOrganisationRow(list, selectedCollectionID) { selectedCollectionID = it }
+        CollectionPickerRow(list, selectedCollectionID) { selectedCollectionID = it }
         IosDivider()
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             ToggleRow(isPinned, { isPinned = it }, "Pin Task", if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin)
@@ -152,6 +156,7 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
     }
 }
 
+/** A label on the left with a date or time picker on the right. */
 @Composable
 internal fun PickerRow(label: String, picker: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

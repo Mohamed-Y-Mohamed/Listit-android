@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens.creating
+package com.list_it.app.ui.screens.note
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.list_it.app.model.Note
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.components.SheetHeader
+import com.list_it.app.ui.screens.collection.CollectionPickerRow
 import com.list_it.app.ui.components.AIGenerateButton
 import com.list_it.app.ui.components.BarButton
 import com.list_it.app.ui.components.ColorInputView
@@ -42,7 +44,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
 
-/** iOS `AddNoteView`. */
+/** The form for adding a new note: title, text, colour, and which collection it goes in. */
 @Composable
 fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -55,6 +57,7 @@ fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
     var showAlert by remember { mutableStateOf(false) }
     var showAIView by remember { mutableStateOf(false) }
 
+    /** Checks the note has a title, then saves it. */
     fun createNote() {
         if (noteTitle.isBlank()) {
             db.setError("Required", "Please enter a title for your note.")
@@ -87,8 +90,9 @@ fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
         IosDivider()
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PlainTextField(noteTitle, { noteTitle = it }, "Note title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
-            DescriptionEditor(noteDescription, { noteDescription = it }, "Description (optional)", minHeight = 100, fontSize = 17, dimmed = true)
-            AIGenerateButton { showAIView = true }
+            DescriptionEditor(noteDescription, { noteDescription = it }, "Description (optional)", minHeight = 100, fontSize = 17, dimmed = true) {
+                AIGenerateButton { showAIView = true }
+            }
         }
         IosDivider()
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -97,7 +101,7 @@ fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
         }
         IosDivider()
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            TaskOrganisationRow(list, selectedCollectionID) { selectedCollectionID = it }
+            CollectionPickerRow(list, selectedCollectionID) { selectedCollectionID = it }
             ToggleRow(isPinned, { isPinned = it }, "Pin Note", if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, tint = IosColor.orange)
         }
     }

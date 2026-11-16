@@ -1,14 +1,12 @@
-package com.list_it.app.ui.screens.detail
+package com.list_it.app.ui.screens.task
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.list_it.app.ui.components.DateChip
-import com.list_it.app.ui.components.InfoRow
 import com.list_it.app.ui.components.SectionLabel
 import com.list_it.app.ui.components.ViewColor
 import com.list_it.app.ui.components.ViewFooterButton
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -64,14 +61,12 @@ import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
 import com.list_it.app.ui.components.DateTimeField
 import com.list_it.app.ui.components.DescriptionEditor
-import com.list_it.app.ui.components.DescriptionModeSwitcher
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
 import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.components.MarkdownText
 import com.list_it.app.ui.components.PlainTextField
-import com.list_it.app.ui.components.TintedButton
 import com.list_it.app.ui.components.rememberAddToCalendarAction
 import com.list_it.app.ui.screens.ai.DescriptionTransformSheet
 import com.list_it.app.ui.theme.IosColor
@@ -82,7 +77,12 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
 
-/** iOS `TaskDetailView`: edit, schedule, pin, complete or delete a task. */
+/**
+ * The page that opens when you tap a task.
+ *
+ * It first shows the task read-only. Tapping "Edit" switches to a form where you can change the
+ * title, description, due date and reminder. Both modes share the same buttons at the bottom.
+ */
 @Composable
 fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -102,9 +102,8 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     var showAlert by remember { mutableStateOf(false) }
     var alertMode by remember { mutableStateOf(AlertMode.ERROR) }
     var statusMessage by remember { mutableStateOf("") }
-    var isMarkdownPreview by remember { mutableStateOf(false) }
     var activeAIMode by remember { mutableStateOf<AIFeatureMode?>(null) }
-    // The sheet opens to read the task; Edit swaps in the form (web TasksDetails).
+    // false = reading the task, true = editing it.
     var isEditing by remember { mutableStateOf(false) }
     val live = db.tasks.firstOrNull { it.id == task.id } ?: task
 
@@ -116,7 +115,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     val isOverdue = hasDueDate && endOfDueDay <= now
     val reminderLimit = if (hasDueDate && endOfDueDay > now) endOfDueDay else null
 
-    // loadExistingReminder()
+    // When the page opens, check whether this task already has a reminder set.
     LaunchedEffect(Unit) {
         val pending = Reminders.pendingDate(task.id)
         if (pending != null) {
@@ -128,7 +127,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         ReminderStore.date(task.id)?.takeIf { it <= Instant.now() }?.let { lastReminderDate = it }
     }
 
-    // keepReminderWithinDueDay()
+    // If the due date moves earlier, pull the reminder back so it still goes off before the task is due.
     LaunchedEffect(editedDueDate, hasDueDate, hasReminder) {
         val limit = reminderLimit ?: return@LaunchedEffect
         if (!hasReminder || editedReminder <= limit) return@LaunchedEffect
@@ -137,6 +136,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         editedReminder = minOf(maxOf(sameTime, Instant.now()), limit)
     }
 
+    /** Checks the form, saves the task, then sets up (or cancels) its reminder. */
     fun saveChanges() {
         if (editedText.isBlank()) {
             db.setError("Error", "Your Task must have a title.")
@@ -167,6 +167,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         }
     }
 
+    /** Marks the task done from the edit form and closes the page. */
     fun completeTask() = scope.launch {
         if (db.completeTask(task)) {
             Reminders.cancel(task.id)
@@ -174,6 +175,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         } else showAlert = true
     }
 
+    /** Throws away unsaved edits and goes back to reading the task. */
     fun cancelEdit() {
         editedText = live.text
         editedDescription = live.description.orEmpty()
@@ -183,16 +185,18 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         isEditing = false
     }
 
-    /** Pin and complete apply the moment they are tapped, in view mode. */
+    /** While reading the task, Pin saves straight away (no need to tap Save). */
     fun togglePin() = scope.launch {
         if (db.updatePinForTask(live, !live.isPinned)) isPinned = !live.isPinned else { alertMode = AlertMode.ERROR; showAlert = true }
     }
 
+    /** While reading the task, Complete saves straight away; tapping it again un-completes the task. */
     fun toggleCompleted() = scope.launch {
         val ok = if (live.isCompleted) db.uncompleteTask(live) else db.completeTask(live).also { if (it) Reminders.cancel(task.id) }
         if (!ok) { alertMode = AlertMode.ERROR; showAlert = true }
     }
 
+    /** Deletes the task for good, clears its reminder and closes the page. */
     fun performDelete() = scope.launch {
         if (db.deleteTask(task)) {
             Reminders.cancel(task.id)
@@ -206,8 +210,9 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     if (!isEditing) {
         TaskView(
             task = live, accent = accent, reminder = if (hasReminder) editedReminder else null,
-            onDismiss = dismiss, onEdit = { isEditing = true }, onAddDueDate = { isEditing = true; hasDueDate = true },
+            onDismiss = dismiss, onEdit = { isEditing = true },
             onTogglePin = { togglePin() }, onToggleComplete = { toggleCompleted() },
+            onAddToCalendar = { addToCalendar(live.text, live.description.orEmpty()) },
             onDelete = { alertMode = AlertMode.DELETE; showAlert = true },
         )
     } else Column(Modifier.fillMaxSize().background(accent.copy(alpha = 0.08f))) {
@@ -216,28 +221,21 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             leading = { BarButton("Cancel") { cancelEdit() } },
             trailing = { BarButton("Save", bold = true) { saveChanges() } },
         )
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // The title stays at the top; only the description box scrolls when the text is long.
+        Column(Modifier.weight(1f).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             PlainTextField(editedText, { editedText = it }, "Task title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
             IosDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    DescriptionModeSwitcher(isMarkdownPreview, { isMarkdownPreview = it }, accent)
-                    Spacer(Modifier.weight(1f))
-                    AIMenuView(editedDescription) { activeAIMode = it }
-                }
-                if (isMarkdownPreview) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 70.dp).padding(top = 8.dp, start = 5.dp)) {
-                        if (editedDescription.isEmpty()) Text("Nothing to preview", fontSize = 13.sp, color = palette.secondary)
-                        else MarkdownText(editedDescription, fontSize = 13)
-                    }
-                } else {
-                    DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 70)
-                }
+            DescriptionEditor(
+                editedDescription, { editedDescription = it }, "Add a description", minHeight = 100,
+                modifier = Modifier.weight(1f), fillHeight = true,
+            ) {
+                AIMenuView(editedDescription) { activeAIMode = it }
             }
-            IosDivider()
-
-            // Schedule section
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        }
+        // Due date and reminder stay pinned above the buttons, so they're on screen however long the description is.
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            IosDivider() // line above the due date and reminder
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.CalendarMonth, null, tint = accent)
                     Spacer(Modifier.width(8.dp))
@@ -282,29 +280,16 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
                 }
                 if (statusMessage.isNotEmpty()) Text(statusMessage, style = IosFont.caption, color = palette.secondary)
             }
-            IosDivider()
-
-            // Actions grid
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TintedButton(if (isPinned) "Unpin" else "Pin", if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, IosColor.orange, Modifier.weight(1f), minHeight = 40.dp) {
-                        isPinned = !isPinned
-                    }
-                    TintedButton("Delete", Icons.Filled.Delete, IosColor.red, Modifier.weight(1f), minHeight = 40.dp) {
-                        alertMode = AlertMode.DELETE; showAlert = true
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TintedButton("Add to Calendar", Icons.Filled.EditCalendar, IosColor.blue, Modifier.weight(1f), minHeight = 40.dp) {
-                        addToCalendar(editedText, editedDescription)
-                    }
-                    TintedButton(
-                        "Complete", Icons.Filled.CheckCircle, accent, Modifier.weight(1f), prominent = true, minHeight = 40.dp,
-                        textStyle = IosFont.subheadline.copy(fontWeight = FontWeight.SemiBold, color = Color.White),
-                    ) { completeTask() }
-                }
-            }
+            IosDivider(Modifier.padding(top = 12.dp))
         }
+        TaskButtons(
+            isPinned = isPinned,
+            completeLabel = "Complete",
+            onTogglePin = { isPinned = !isPinned },
+            onAddToCalendar = { addToCalendar(editedText, editedDescription) },
+            onDelete = { alertMode = AlertMode.DELETE; showAlert = true },
+            onComplete = { completeTask() },
+        )
     }
 
     if (showAlert) {
@@ -322,7 +307,10 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     }
 }
 
-/** Read-only task view (web TasksDetails view mode): Dismiss | Edit, sections, then Pin, Delete, Complete. */
+/**
+ * The read-only version of the task page. The title, status and description scroll;
+ * the due date, reminder and buttons (see [TaskButtons]) stay fixed at the bottom.
+ */
 @Composable
 private fun ColumnScope.TaskView(
     task: ToDoTask,
@@ -330,12 +318,11 @@ private fun ColumnScope.TaskView(
     reminder: Instant?,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
-    onAddDueDate: () -> Unit,
     onTogglePin: () -> Unit,
     onToggleComplete: () -> Unit,
+    onAddToCalendar: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val db = LocalDb.current
     val palette = LocalPalette.current
     val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
     val due = task.dueDate
@@ -346,7 +333,8 @@ private fun ColumnScope.TaskView(
             leading = { BarButton("Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // The title stays at the top; only the description scrolls when it's long.
+        Column(Modifier.weight(1f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(task.text.ifEmpty { "Untitled task" }, fontSize = 21.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp, color = palette.primary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -356,38 +344,74 @@ private fun ColumnScope.TaskView(
                     task.dateCompleted?.takeIf { task.isCompleted }?.let { Text(" · ${Dates.abbreviatedDateTime(it)}", fontSize = 13.sp, color = muted) }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel("Due date")
-                if (due != null) DateChip(Dates.dayMonthYear(due), overdue)
-                else Row(Modifier.clickable(onClick = onAddDueDate).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.EditCalendar, null, tint = ViewColor.info, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Add due date", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ViewColor.info)
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel("Reminder")
-                Text(reminder?.let { Dates.abbreviatedDateTime(it) } ?: "No reminder", fontSize = 14.sp, color = if (reminder != null) palette.primary else muted)
-            }
             task.description?.takeIf { it.isNotBlank() }?.let { description ->
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Description")
-                    MarkdownText(description, fontSize = 14)
+                    Box(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(bottom = 8.dp)) {
+                        MarkdownText(description, fontSize = 14)
+                    }
                 }
             }
-            Column {
-                IosDivider()
-                Spacer(Modifier.height(12.dp))
-                InfoRow("Collection", db.collections.firstOrNull { it.id == task.collectionID }?.collectionName)
-                InfoRow("List", db.lists.firstOrNull { it.id == task.listID }?.listName)
+        }
+        // Due date and reminder side by side, pinned above the buttons so you never have to scroll for them.
+        // Their titles are black (white in dark mode) and the values next to them dark grey.
+        val valueGrey = if (palette.isDark) WebColor.gray400 else WebColor.gray600
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            IosDivider() // line above the due date and reminder
+            Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionLabel("Due date", color = palette.primary)
+                    if (due != null) DateChip(Dates.dayMonthYear(due), overdue)
+                    else Text("No due date", fontSize = 14.sp, color = valueGrey, modifier = Modifier.padding(vertical = 6.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionLabel("Reminder", color = palette.primary)
+                    Text(
+                        reminder?.let { Dates.abbreviatedDateTime(it) } ?: "No reminder", fontSize = 14.sp,
+                        color = valueGrey, modifier = Modifier.padding(vertical = 6.dp),
+                    )
+                }
             }
-            Spacer(Modifier.height(8.dp))
+            IosDivider(Modifier.padding(top = 12.dp))
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ViewFooterButton(if (task.isPinned) "Unpin" else "Pin", if (task.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, ViewColor.warning, onClick = onTogglePin)
-            ViewFooterButton("Delete", Icons.Filled.Delete, ViewColor.danger, onClick = onDelete)
-            Spacer(Modifier.weight(1f))
-            ViewFooterButton(if (task.isCompleted) "Completed" else "Complete", Icons.Filled.CheckCircle, accent, prominent = true, onClick = onToggleComplete)
+        TaskButtons(
+            isPinned = task.isPinned,
+            completeLabel = if (task.isCompleted) "Completed" else "Complete",
+            onTogglePin = onTogglePin,
+            onAddToCalendar = onAddToCalendar,
+            onDelete = onDelete,
+            onComplete = onToggleComplete,
+        )
+    }
+}
+
+/**
+ * The buttons at the bottom of the task page (and its edit screen):
+ * Pin, Calendar and Delete side by side, with a full-width green Complete button underneath.
+ */
+@Composable
+private fun TaskButtons(
+    isPinned: Boolean,
+    completeLabel: String,
+    onTogglePin: () -> Unit,
+    onAddToCalendar: () -> Unit,
+    onDelete: () -> Unit,
+    onComplete: () -> Unit,
+) {
+    // Icons and text are black in light mode and white in dark mode (like the website); the buttons keep their colours.
+    val label = if (LocalPalette.current.isDark) Color.White else Color.Black
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ViewFooterButton(
+                if (isPinned) "Unpin" else "Pin", if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                ViewColor.warning, Modifier.weight(1f), contentColor = label, pill = true, onClick = onTogglePin,
+            )
+            ViewFooterButton("Calendar", Icons.Filled.EditCalendar, IosColor.blue, Modifier.weight(1f), contentColor = label, pill = true, onClick = onAddToCalendar)
+            ViewFooterButton("Delete", Icons.Filled.Delete, IosColor.red, Modifier.weight(1f), contentColor = label, pill = true, onClick = onDelete)
         }
+        ViewFooterButton(
+            completeLabel, Icons.Filled.CheckCircle, IosColor.green, Modifier.fillMaxWidth(), prominent = true,
+            contentColor = label, pill = true, minHeight = 46.dp, onClick = onComplete,
+        )
     }
 }

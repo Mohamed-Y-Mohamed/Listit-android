@@ -15,10 +15,10 @@ import com.list_it.app.ui.components.BackButton
 import com.list_it.app.ui.components.IosSheet
 import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.components.SearchField
-import com.list_it.app.ui.screens.detail.TaskDetailSheet
+import com.list_it.app.ui.screens.task.TaskDetailSheet
 import com.list_it.app.ui.theme.appBackground
 
-/** Shared layout for the default list screens: nav bar, search field and scrolling content. */
+/** The common frame for the built-in lists (Today, Overdue, etc.): a top bar, a search box, and the tasks below. */
 @Composable
 internal fun DefaultListScaffold(
     title: String,
@@ -46,7 +46,7 @@ internal fun DefaultListScaffold(
     }
 }
 
-/** Search used by Today, Tomorrow, Priority and Overdue: case and space insensitive. */
+/** True if this text matches the search, ignoring capital letters and spaces. */
 internal fun String.matchesListQuery(query: String): Boolean {
     val clean = query.lowercase().replace(" ", "")
     return clean.isEmpty() || lowercase().replace(" ", "").contains(clean)

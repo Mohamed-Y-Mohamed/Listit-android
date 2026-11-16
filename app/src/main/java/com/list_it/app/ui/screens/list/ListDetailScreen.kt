@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens
+package com.list_it.app.ui.screens.list
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -79,6 +79,8 @@ import com.list_it.app.model.ToDoTask
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.Dates
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.screens.task.TaskInfoSheet
+import com.list_it.app.ui.screens.collection.UpdateCollectionSheet
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BackButton
 import com.list_it.app.ui.components.ContentUnavailable
@@ -94,11 +96,11 @@ import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.components.SearchField
 import com.list_it.app.ui.components.UnderlineTab
 import com.list_it.app.ui.components.diagonalSlicePath
-import com.list_it.app.ui.screens.creating.AddCollectionSheet
-import com.list_it.app.ui.screens.creating.AddNoteSheet
-import com.list_it.app.ui.screens.creating.AddTaskSheet
-import com.list_it.app.ui.screens.detail.NoteDetailSheet
-import com.list_it.app.ui.screens.detail.TaskDetailSheet
+import com.list_it.app.ui.screens.collection.AddCollectionSheet
+import com.list_it.app.ui.screens.note.AddNoteSheet
+import com.list_it.app.ui.screens.task.AddTaskSheet
+import com.list_it.app.ui.screens.note.NoteDetailSheet
+import com.list_it.app.ui.screens.task.TaskDetailSheet
 import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
@@ -107,7 +109,7 @@ import com.list_it.app.ui.theme.colorFromHex
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-/** iOS `ListDetailView`. */
+/** The page for one list: its collections, and the tasks and notes inside each one. */
 @Composable
 fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
     var showAddTask by remember { mutableStateOf(false) }
@@ -156,6 +158,7 @@ fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
     if (showTaskInfo) IosSheet(onDismiss = { showTaskInfo = false }) { dismiss -> TaskInfoSheet(dismiss) }
 }
 
+/** Every collection in this list, one card each. */
 @Composable
 private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchText: String) {
     val db = LocalDb.current
@@ -179,6 +182,7 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
         SortOption.ALPHABETICAL_ZA -> base.sortedByDescending { it.collectionName.lowercase() }
     }
 
+    /** Deletes whatever you chose to delete (a collection, task or note) after you confirm. */
     fun performDelete() = scope.launch {
         val toDelete = selectedToDelete
         if (toDelete == null) {
@@ -234,7 +238,7 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
     }
 }
 
-/** Expandable collection card (iOS `CollectionView` + `CollectionHeader`). */
+/** A collection's card. Tap the header to open or close it and see its tasks and notes. */
 @Composable
 private fun CollectionView(collection: ListCollection, searchText: String) {
     var isExpandedState by remember { mutableStateOf(false) }
@@ -260,7 +264,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
                 translationY = -4.dp.toPx() * tilt
             }
             .clip(shape)
-            .border(0.8.dp, color.copy(alpha = if (isDark) 0.25f else 0.16f), shape),
+            .border(1.dp, color.copy(alpha = if (isDark) 0.45f else 0.35f), shape),
     ) {
         // Header
         Row(
@@ -272,7 +276,8 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
                     drawPath(
                         diagonalSlicePath(Size(w, size.height), skew.dp.toPx()),
                         Brush.horizontalGradient(
-                            listOf(color.copy(alpha = if (isDark) 0.40f else 0.20f), color.copy(alpha = if (isDark) 0.20f else 0.10f)),
+                            // Stronger tint so each collection's colour is easy to see.
+                            listOf(color.copy(alpha = if (isDark) 0.65f else 0.42f), color.copy(alpha = if (isDark) 0.38f else 0.22f)),
                             endX = w,
                         ),
                     )
@@ -296,6 +301,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
     }
 }
 
+/** The open part of a collection card: its Tasks and Notes tabs. */
 @Composable
 private fun CollectionDetailView(collection: ListCollection, modifier: Modifier) {
     val db = LocalDb.current
@@ -308,6 +314,7 @@ private fun CollectionDetailView(collection: ListCollection, modifier: Modifier)
     }
 }
 
+/** Switches between the Tasks tab and the Notes tab inside a collection. */
 @Composable
 private fun CollectionTabView(collection: ListCollection, searchText: String) {
     val pager = rememberPagerState { 2 }
@@ -327,6 +334,7 @@ private fun CollectionTabView(collection: ListCollection, searchText: String) {
 
 // MARK: - Tasks
 
+/** The tasks inside a collection, filtered by the search box. */
 @Composable
 private fun TaskListView(collection: ListCollection, searchText: String) {
     val db = LocalDb.current
@@ -393,7 +401,7 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
     }
 }
 
-/** "Move …" submenu listing the collections of the same list. */
+/** The "Move to…" menu: shows the other collections in this list so you can move an item there. */
 @Composable
 private fun MoveMenu(collections: List<ListCollection>, currentID: String, title: String, onMove: (ListCollection) -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -407,7 +415,7 @@ private fun MoveMenu(collections: List<ListCollection>, currentID: String, title
     }
 }
 
-/** A task row with its coloured status bar (iOS `TaskView`). */
+/** One task in the list, with a coloured bar on the side showing if it's overdue, pinned, etc. */
 @Composable
 private fun TaskView(task: ToDoTask) {
     val db = LocalDb.current
@@ -451,6 +459,7 @@ private fun TaskView(task: ToDoTask) {
 
 // MARK: - Notes
 
+/** The notes inside a collection, filtered by the search box. */
 @Composable
 private fun NoteListView(collection: ListCollection, searchText: String) {
     val db = LocalDb.current
@@ -519,7 +528,7 @@ private fun NoteListView(collection: ListCollection, searchText: String) {
     }
 }
 
-/** Sticky-note card with a folded corner (iOS `NoteView`). */
+/** One note, drawn as a sticky note with a folded corner. */
 @Composable
 private fun NoteView(note: Note) {
     val palette = LocalPalette.current

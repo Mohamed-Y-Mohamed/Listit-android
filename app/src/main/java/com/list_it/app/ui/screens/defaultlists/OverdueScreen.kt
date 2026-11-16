@@ -38,7 +38,7 @@ import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 
-/** iOS `OverdueView`: tasks whose due day has passed. */
+/** Tasks whose due date has already passed. */
 @Composable
 fun OverdueScreen(onBack: () -> Unit) {
     val db = LocalDb.current
@@ -79,6 +79,7 @@ fun OverdueScreen(onBack: () -> Unit) {
     }
 }
 
+/** A card for one overdue task, showing when it was created and when it was due. */
 @Composable
 private fun OverdueTaskCard(task: ToDoTask, modifier: Modifier) {
     val db = LocalDb.current

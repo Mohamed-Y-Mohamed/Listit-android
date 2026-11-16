@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens
+package com.list_it.app.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -72,6 +72,8 @@ import com.list_it.app.model.QuickAction
 import com.list_it.app.model.SortOption
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.screens.list.UpdateListSheet
+import com.list_it.app.ui.screens.onboarding.WhatsNewSheet
 import com.list_it.app.ui.LocalPrefs
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.CapsuleCount
@@ -90,7 +92,7 @@ import com.list_it.app.ui.components.PinnedListCard
 import com.list_it.app.ui.components.RowListCard
 import com.list_it.app.ui.components.TintedButton
 import com.list_it.app.ui.components.wavePath
-import com.list_it.app.ui.screens.creating.AddListSheet
+import com.list_it.app.ui.screens.list.AddListSheet
 import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
@@ -100,7 +102,7 @@ import kotlinx.coroutines.launch
 
 const val CURRENT_VERSION = 5
 
-/** Home screen (iOS `AllListsView`). */
+/** The home page: your pinned lists, all your lists, search, and the menu for the built-in lists. */
 @Composable
 fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) -> Unit) {
     val db = LocalDb.current
@@ -121,6 +123,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
 
     RequestNotificationPermission()
 
+    /** Deletes the chosen list after you confirm. */
     fun performDelete() {
         val listToDelete = selectedListToDelete
         if (listToDelete == null) {
@@ -212,6 +215,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
 
 private class ListActions(val togglePin: (TodoList) -> Unit, val update: (TodoList) -> Unit, val delete: (TodoList) -> Unit)
 
+/** The menu at the top of the home page: create a list, or open a built-in list like Today. */
 @Composable
 private fun QuickMenu(onCreate: () -> Unit, onQuickAction: (QuickAction) -> Unit) {
     IosMenu(label = { Icon(Icons.Filled.FilterList, "Menu", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp)) }) { close ->
@@ -227,6 +231,7 @@ private fun QuickMenu(onCreate: () -> Unit, onQuickAction: (QuickAction) -> Unit
     }
 }
 
+/** The menu you get by long-pressing a list: pin, update or delete it. */
 @Composable
 private fun ListContextMenu(list: TodoList, actions: ListActions, close: () -> Unit) {
     MenuItem(if (list.isPinned) "Unpin List" else "Pin List", if (list.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin) { close(); actions.togglePin(list) }
@@ -238,12 +243,14 @@ private fun ListContextMenu(list: TodoList, actions: ListActions, close: () -> U
 
 // MARK: - Header
 
+/** Your name, shown at the top of the home page. */
 @Composable
 private fun HeaderView() {
     val db = LocalDb.current
     Text(db.currentUser?.name ?: "Loading...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = LocalPalette.current.primary)
 }
 
+/** The "Your Lists" heading, with the sort menu and the "See what's new" button. */
 @Composable
 private fun ListInfoSection(currentSort: SortOption, onSort: (SortOption) -> Unit, onWhatsNew: () -> Unit) {
     val db = LocalDb.current
@@ -279,6 +286,7 @@ private fun ListInfoSection(currentSort: SortOption, onSort: (SortOption) -> Uni
 
 // MARK: - Pinned lists
 
+/** The sideways-scrolling row of pinned lists. */
 @Composable
 private fun PinnedListView(searchText: String, onOpenList: (TodoList) -> Unit, actions: ListActions) {
     val db = LocalDb.current

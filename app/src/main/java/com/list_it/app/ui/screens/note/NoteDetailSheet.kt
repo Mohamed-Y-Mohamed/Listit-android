@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens.detail
+package com.list_it.app.ui.screens.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -53,7 +52,6 @@ import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
 import com.list_it.app.ui.components.ColorInputView
 import com.list_it.app.ui.components.DescriptionEditor
-import com.list_it.app.ui.components.DescriptionModeSwitcher
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -69,7 +67,7 @@ import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
 import kotlinx.coroutines.launch
 
-/** iOS `NoteDetailView`: edit, recolour, pin, share or delete a note. */
+/** The page that opens when you tap a note. Read it, edit it, change its colour, pin, share or delete it. */
 @Composable
 fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -83,7 +81,6 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     var isPinned by remember { mutableStateOf(note.isPinned) }
     var showAlert by remember { mutableStateOf(false) }
     var alertMode by remember { mutableStateOf(AlertMode.ERROR) }
-    var isMarkdownPreview by remember { mutableStateOf(false) }
     var activeAIMode by remember { mutableStateOf<AIFeatureMode?>(null) }
     // Opens to read the note; Edit swaps in the form (web notedetail).
     var isEditing by remember { mutableStateOf(false) }
@@ -93,6 +90,7 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     val accent = collection?.let { colorFromHex(it.bgColorHex) } ?: IosColor.orange
     val shareText = "${note.title}\n\n${note.description.orEmpty()}"
 
+    /** Checks the note has a title, then saves your edits. */
     fun saveChanges() {
         if (editedTitle.isBlank()) {
             db.setError("Required", "Your note must have a title.")
@@ -105,6 +103,7 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
         }
     }
 
+    /** Throws away unsaved edits and goes back to reading the note. */
     fun cancelEdit() {
         editedTitle = live.title
         editedDescription = live.description.orEmpty()
@@ -113,10 +112,12 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
         isEditing = false
     }
 
+    /** Pins or unpins the note straight away. */
     fun togglePin() = scope.launch {
         if (db.updatePinForNote(live, !live.isPinned)) isPinned = !live.isPinned else { alertMode = AlertMode.ERROR; showAlert = true }
     }
 
+    /** Deletes the note for good and closes the page. */
     fun performDelete() = scope.launch {
         if (db.deleteNote(note)) dismiss() else { alertMode = AlertMode.ERROR; showAlert = true }
     }
@@ -133,23 +134,15 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
             leading = { BarButton("Cancel") { cancelEdit() } },
             trailing = { BarButton("Save", bold = true) { saveChanges() } },
         )
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // The title stays at the top and the colours and buttons at the bottom; only the description box scrolls.
+        Column(Modifier.weight(1f).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             PlainTextField(editedTitle, { editedTitle = it }, "Note title", IosFont.title3.copy(fontWeight = FontWeight.SemiBold), Modifier.fillMaxWidth())
             IosDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    DescriptionModeSwitcher(isMarkdownPreview, { isMarkdownPreview = it }, accent)
-                    Spacer(Modifier.weight(1f))
-                    AIMenuView(editedDescription) { activeAIMode = it }
-                }
-                if (isMarkdownPreview) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 100.dp).padding(top = 8.dp, start = 5.dp)) {
-                        if (editedDescription.isEmpty()) Text("Nothing to preview", fontSize = 13.sp, color = palette.secondary)
-                        else MarkdownText(editedDescription, fontSize = 13)
-                    }
-                } else {
-                    DescriptionEditor(editedDescription, { editedDescription = it }, "Add a description", minHeight = 100)
-                }
+            DescriptionEditor(
+                editedDescription, { editedDescription = it }, "Add a description", minHeight = 100,
+                modifier = Modifier.weight(1f), fillHeight = true,
+            ) {
+                AIMenuView(editedDescription) { activeAIMode = it }
             }
             IosDivider()
             ColorInputView(editedHex) { editedHex = it }
@@ -183,7 +176,7 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     }
 }
 
-/** Read-only note view (web notedetail view mode): Dismiss | Edit, the note, then Pin, Delete, Share. */
+/** The read-only version of the note page, with Pin, Delete and Share at the bottom. */
 @Composable
 private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -> Unit, onTogglePin: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     val db = LocalDb.current
@@ -196,7 +189,8 @@ private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -
             leading = { BarButton("Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // The title stays at the top; only the note's text scrolls when it's long.
+        Column(Modifier.weight(1f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
                     Box(Modifier.padding(top = 6.dp).size(width = 4.dp, height = 16.dp).clip(CircleShape).background(if (note.isPinned) ViewColor.warning else color))
@@ -205,26 +199,27 @@ private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -
                 }
                 Text("Created ${Dates.dayMonthYear(note.createdAt)}", fontSize = 13.sp, color = muted)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel("Note")
                 val description = note.description.orEmpty()
                 if (description.isNotBlank()) {
                     Box(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        Modifier.fillMaxWidth().weight(1f, fill = false).clip(RoundedCornerShape(16.dp))
                             .background(if (palette.isDark) Color.White.copy(alpha = 0.03f) else Color.Black.copy(alpha = 0.02f))
-                            .border(1.dp, palette.ramp.border, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
+                            .border(1.dp, palette.ramp.border, RoundedCornerShape(16.dp))
+                            .verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
                     ) { MarkdownText(description, fontSize = 14) }
                 } else {
                     Text("Nothing written yet", fontSize = 14.sp, color = muted)
                 }
             }
-            Column {
-                IosDivider()
-                Spacer(Modifier.height(12.dp))
-                InfoRow("Collection", db.collections.firstOrNull { it.id == note.collectionID }?.collectionName)
-                InfoRow("List", db.lists.firstOrNull { it.id == note.listID }?.listName)
-            }
-            Spacer(Modifier.height(8.dp))
+        }
+        // Where the note lives, pinned above the buttons.
+        Column(Modifier.padding(horizontal = 20.dp)) {
+            IosDivider()
+            Spacer(Modifier.height(12.dp))
+            InfoRow("Collection", db.collections.firstOrNull { it.id == note.collectionID }?.collectionName)
+            InfoRow("List", db.lists.firstOrNull { it.id == note.listID }?.listName)
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ViewFooterButton(if (note.isPinned) "Unpin" else "Pin", if (note.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, ViewColor.warning, onClick = onTogglePin)

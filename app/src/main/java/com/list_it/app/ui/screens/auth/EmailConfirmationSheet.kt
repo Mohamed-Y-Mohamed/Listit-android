@@ -48,7 +48,7 @@ import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** iOS `EmailConfirmationView`: waits for the user to confirm their email. */
+/** Shown after sign-up: asks you to confirm your email and waits until you do. */
 @Composable
 fun ColumnScope.EmailConfirmationSheet(dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -71,6 +71,7 @@ fun ColumnScope.EmailConfirmationSheet(dismiss: () -> Unit) {
         }
     }
 
+    /** Cancels the sign-up and removes the unconfirmed account. */
     fun deleteUser() = scope.launch {
         if (db.userID.isEmpty()) {
             db.setError("Error", "User ID is empty")
@@ -95,6 +96,7 @@ fun ColumnScope.EmailConfirmationSheet(dismiss: () -> Unit) {
     if (showAlert) IosAlert(db.alertTitle, db.alertMessage, onDismiss = { showAlert = false })
 }
 
+/** The "you're all set" message once your email is confirmed. */
 @Composable
 private fun SuccessView() {
     val palette = LocalPalette.current
@@ -110,6 +112,7 @@ private fun SuccessView() {
     }
 }
 
+/** The "check your inbox" message, with a button to check again. */
 @Composable
 private fun PendingVerificationView(email: String, isChecking: Boolean, onCheck: () -> Unit) {
     val palette = LocalPalette.current

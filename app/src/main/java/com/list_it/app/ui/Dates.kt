@@ -7,7 +7,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-/** Date helpers matching the iOS `Calendar` / `Date.formatted` calls used by the app. */
+/** Small helpers for working with dates: start/end of a day, and turning dates into readable text. */
 object Dates {
     val zone: ZoneId get() = ZoneId.systemDefault()
 

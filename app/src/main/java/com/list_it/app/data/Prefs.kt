@@ -29,7 +29,9 @@ class Prefs(private val store: SharedPreferences) {
     /** Background for each theme. Defaults to Midnight (dark) and Soft grey (light). */
     private var _surfaceDark by mutableStateOf(readSurface(KEY_SURFACE_DARK))
     private var _surfaceLight by mutableStateOf(readSurface(KEY_SURFACE_LIGHT))
+    /** The background style chosen for light or dark mode. */
     fun surface(isDark: Boolean): SurfaceChoice = if (isDark) _surfaceDark else _surfaceLight
+    /** Saves a new background style for light or dark mode. */
     fun setSurface(isDark: Boolean, choice: SurfaceChoice) {
         if (isDark) _surfaceDark = choice else _surfaceLight = choice
         store.edit { putString(if (isDark) KEY_SURFACE_DARK else KEY_SURFACE_LIGHT, choice.name.lowercase()) }
@@ -57,6 +59,7 @@ class Prefs(private val store: SharedPreferences) {
     fun getString(key: String): String? = store.getString(key, null)
     fun putString(key: String, value: String) = store.edit { putString(key, value) }
 
+    /** Loads a saved background style, falling back to the default if none is saved. */
     private fun readSurface(key: String): SurfaceChoice =
         SurfaceChoice.entries.firstOrNull { it.name.lowercase() == store.getString(key, null) } ?: SurfaceChoice.SOFT
 

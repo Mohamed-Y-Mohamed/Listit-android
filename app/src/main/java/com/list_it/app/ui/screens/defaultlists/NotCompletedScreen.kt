@@ -42,7 +42,7 @@ import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
 import java.time.Instant
 
-/** iOS `NotCompletedView`: every pending task grouped by list. */
+/** Every task you haven't finished yet, grouped by list. */
 @Composable
 fun NotCompletedScreen(onBack: () -> Unit) {
     val db = LocalDb.current
@@ -79,6 +79,7 @@ fun NotCompletedScreen(onBack: () -> Unit) {
     }
 }
 
+/** A card for one unfinished task. */
 @Composable
 private fun PendingTaskCard(task: ToDoTask, modifier: Modifier) {
     val db = LocalDb.current

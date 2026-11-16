@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens
+package com.list_it.app.ui.screens.onboarding
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -58,7 +58,7 @@ import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Four-step onboarding (iOS `IntroView`). */
+/** The four welcome pages new users swipe through before they start. */
 @Composable
 fun IntroScreen(onGetStarted: () -> Unit) {
     val palette = LocalPalette.current
@@ -143,6 +143,7 @@ fun IntroScreen(onGetStarted: () -> Unit) {
     }
 }
 
+/** One welcome page: an icon, a heading, some text and an example. */
 @Composable
 private fun OnboardingPage(
     icon: ImageVector,
@@ -194,11 +195,13 @@ private fun OnboardingPage(
     }
 }
 
+/** The paragraph text on a welcome page. */
 @Composable
 private fun BodyText(text: String) {
     Text(text, style = IosFont.body.copy(lineHeight = 26.sp), color = LocalPalette.current.secondary, textAlign = TextAlign.Center)
 }
 
+/** The tinted box that shows a small example on a welcome page. */
 @Composable
 private fun ExampleBox(accent: Color, spacing: Int = 8, content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -208,6 +211,7 @@ private fun ExampleBox(accent: Color, spacing: Int = 8, content: @Composable Col
     )
 }
 
+/** An icon next to a line of text, used in the examples. */
 @Composable
 private fun LabelRow(text: String, icon: ImageVector, style: TextStyle, color: Color = LocalPalette.current.primary.copy(alpha = 0.85f)) {
     Row(verticalAlignment = Alignment.CenterVertically) {

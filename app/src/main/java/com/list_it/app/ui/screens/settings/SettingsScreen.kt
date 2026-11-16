@@ -121,6 +121,7 @@ private const val FEEDBACK_URL = "https://forms.gle/dE21epzC4L8Tx1Kd9"
 
 private data class Toast(val success: Boolean, val message: String)
 
+/** The Settings tab: profile, appearance, notifications, security and account, each in its own fold-out section. */
 @Composable
 fun SettingsScreen() {
     val db = LocalDb.current
@@ -183,6 +184,7 @@ fun SettingsScreen() {
 @Composable private fun muted() = if (LocalPalette.current.isDark) WebColor.gray400 else WebColor.gray500
 @Composable private fun label() = if (LocalPalette.current.isDark) WebColor.gray300 else Color(0xFF374151)
 
+/** A settings section that opens and closes when you tap its heading. */
 @Composable
 private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
     val palette = LocalPalette.current
@@ -211,6 +213,7 @@ private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit,
     }
 }
 
+/** A section's title with a short grey line underneath. */
 @Composable
 private fun SectionHeading(title: String, subtitle: String) {
     Column {
@@ -219,6 +222,7 @@ private fun SectionHeading(title: String, subtitle: String) {
     }
 }
 
+/** A tappable row with an icon, a title and a short description, e.g. "Privacy Policy". */
 @Composable
 private fun LinkRow(
     icon: ImageVector, tint: Color, title: String, subtitle: String,
@@ -261,9 +265,11 @@ private fun Modifier.fieldBox(focused: Boolean = false, error: Boolean = false):
     return this.fillMaxWidth().clip(shape).background(bg).border(if (focused) 2.dp else 1.dp, border, shape).padding(horizontal = 12.dp, vertical = 10.dp)
 }
 
+/** The small label above a text box. */
 @Composable
 private fun FieldLabel(text: String) = Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = label(), modifier = Modifier.padding(bottom = 4.dp))
 
+/** A text box styled for the settings page. */
 @Composable
 private fun InputField(
     value: String, onChange: (String) -> Unit, placeholder: String, description: String,
@@ -293,6 +299,7 @@ private fun InputField(
     }
 }
 
+/** A settings button that shows a spinner while it's working. */
 @Composable
 private fun ActionButton(text: String, icon: ImageVector, color: Color, enabled: Boolean, busy: Boolean, onClick: () -> Unit) {
     val palette = LocalPalette.current
@@ -326,6 +333,7 @@ private fun PillSwitch(checked: Boolean, description: String, onColor: Color, on
     }
 }
 
+/** A row with an icon, a title and an on/off switch. */
 @Composable
 private fun SwitchRow(icon: ImageVector, iconTint: Color, title: String, checked: Boolean, onColor: Color, onToggle: () -> Unit) {
     val palette = LocalPalette.current
@@ -345,6 +353,7 @@ private fun SwitchRow(icon: ImageVector, iconTint: Color, title: String, checked
     }
 }
 
+/** The little message that pops up to say something saved (or failed). */
 @Composable
 private fun ToastView(toast: Toast, onClose: () -> Unit) {
     val (bg, border, fg) = if (toast.success) Triple(Color(0xFFDCFCE7), Color(0xFFBBF7D0), Color(0xFF16A34A)) else Triple(Color(0xFFFEE2E2), Color(0xFFFECACA), Color(0xFFDC2626))
@@ -362,6 +371,7 @@ private fun ToastView(toast: Toast, onClose: () -> Unit) {
 
 // ---------- Sections ----------
 
+/** Update your name. Your email is shown here but can't be changed. */
 @Composable
 private fun ProfileSection(show: (Boolean, String) -> Unit) {
     val db = LocalDb.current
@@ -411,6 +421,7 @@ private fun ProfileSection(show: (Boolean, String) -> Unit) {
     }
 }
 
+/** Choose light/dark mode and the background style. */
 @Composable
 private fun AppearanceSection() {
     val prefs = LocalPrefs.current
@@ -485,6 +496,7 @@ private fun AppearanceSection() {
     }
 }
 
+/** Turn reminder notifications on or off. */
 @Composable
 private fun NotificationsSection() {
     val prefs = LocalPrefs.current
@@ -505,6 +517,7 @@ private fun NotificationsSection() {
     }
 }
 
+/** Change your password. */
 @Composable
 private fun SecuritySection(show: (Boolean, String) -> Unit) {
     val db = LocalDb.current
@@ -552,6 +565,7 @@ private fun SecuritySection(show: (Boolean, String) -> Unit) {
     }
 }
 
+/** Permanently delete your account and everything in it. */
 @Composable
 private fun AccountSection(show: (Boolean, String) -> Unit) {
     val db = LocalDb.current

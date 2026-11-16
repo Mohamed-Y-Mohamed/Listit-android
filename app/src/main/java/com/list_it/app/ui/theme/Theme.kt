@@ -37,6 +37,7 @@ object WebColor {
     val gray300 = Color(0xFFD1D5DB)
     val gray400 = Color(0xFF9CA3AF)
     val gray500 = Color(0xFF6B7280)
+    val gray600 = Color(0xFF4B5563)
     val gray900 = Color(0xFF111827)
 }
 
@@ -86,6 +87,7 @@ data class Palette(
     val accent get() = if (isDark) WebColor.orange400 else WebColor.sky500
 }
 
+/** Builds the full set of text and background colours for light or dark mode. */
 private fun palette(dark: Boolean, ramp: SurfaceRamp) = if (dark) Palette(
     isDark = true, primary = Color.White, secondary = Color(0x99EBEBF5), tertiary = Color(0x4DEBEBF5),
     separator = Color(0x99545458), fill = Color(0x5C787880), material = ramp.card.copy(alpha = 0.85f), ramp = ramp,
@@ -112,6 +114,7 @@ fun colorFromHex(hex: String): Color {
     }
 }
 
+/** Applies the app's colours and fonts to everything inside it. */
 @Composable
 fun ListItTheme(darkMode: Boolean?, surface: (Boolean) -> SurfaceChoice, content: @Composable () -> Unit) {
     val dark = darkMode ?: isSystemInDarkTheme()

@@ -111,6 +111,7 @@ fun DateTimeField(
     }
 }
 
+/** The rounded tap target that shows a date or time and opens the picker. */
 @Composable
 private fun Pill(text: String, background: Color, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Text(

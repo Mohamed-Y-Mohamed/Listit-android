@@ -30,7 +30,7 @@ import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
 
-/** Colour picker grid backed by the `app_colors` table (iOS `ColorInputView`). */
+/** A grid of colour swatches to pick from. The colours come from the database. */
 @Composable
 fun ColorInputView(selectedColorHex: String, onSelect: (String) -> Unit) {
     val db = LocalDb.current
@@ -53,6 +53,7 @@ fun ColorInputView(selectedColorHex: String, onSelect: (String) -> Unit) {
     }
 }
 
+/** One colour swatch. Shows a tick when it's the chosen colour. */
 @Composable
 private fun ColorSelectionButton(hex: String, isSelected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)

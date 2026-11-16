@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 
-/** iOS `.pickerStyle(.segmented)`. */
+/** A row of joined buttons where exactly one option is selected. */
 @Composable
 fun <T> SegmentedControl(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
     val palette = LocalPalette.current

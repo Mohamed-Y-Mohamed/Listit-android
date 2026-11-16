@@ -1,29 +1,21 @@
-package com.list_it.app.ui.screens.creating
+package com.list_it.app.ui.screens.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.list_it.app.model.ListCollection
 import com.list_it.app.model.TodoList
@@ -34,14 +26,13 @@ import com.list_it.app.ui.components.InputField
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosTopBar
+import com.list_it.app.ui.components.SheetHeader
 import com.list_it.app.ui.theme.IosColor
-import com.list_it.app.ui.theme.IosFont
-import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
 
-/** iOS `AddListView`: creates a List together with its "General" collection. */
+/** The form for making a new list. Every new list starts with a "General" collection inside it. */
 @Composable
 fun ColumnScope.AddListSheet(lists: List<TodoList>, dismiss: () -> Unit) {
     val db = LocalDb.current
@@ -50,6 +41,7 @@ fun ColumnScope.AddListSheet(lists: List<TodoList>, dismiss: () -> Unit) {
     var selectedColorHex by remember { mutableStateOf("") }
     var showAlert by remember { mutableStateOf(false) }
 
+    /** Checks the name isn't empty, then saves the new list. */
     fun createList() {
         if (listName.isEmpty() || selectedColorHex.isEmpty()) {
             db.setError("Error", "Please enter a name and choose a color.")
@@ -88,13 +80,4 @@ fun ColumnScope.AddListSheet(lists: List<TodoList>, dismiss: () -> Unit) {
         ColorInputView(selectedColorHex) { selectedColorHex = it }
     }
     if (showAlert) IosAlert(db.alertTitle, db.alertMessage, onDismiss = { showAlert = false })
-}
-
-/** Centered icon and subtitle at the top of the create sheets. */
-@Composable
-internal fun SheetHeader(icon: ImageVector, tint: Color, subtitle: String?) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(40.dp))
-        subtitle?.let { Text(it, style = IosFont.subheadline, color = LocalPalette.current.secondary, textAlign = TextAlign.Center) }
-    }
 }

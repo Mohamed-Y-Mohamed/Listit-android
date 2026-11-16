@@ -164,6 +164,17 @@ class SupabaseTest {
     }
 
     @Test
+    fun listsFromTheDatabaseAreNeverTreatedAsBuiltIn() = runBlocking {
+        // A list saved with is_default = true used to be locked: no adding, no deleting.
+        val acc = server.seedUser()
+        server.tables["list"]!! += json("""{"id":"inbox","created_at":"2026-01-05 09:00:00","list_icon":"tray","list_name":"Index","is_default":true,"bg_color_hex":"#007AFF","user_id":"${acc.id}","is_pinned":false}""")
+        assertTrue(db.signIn("abdul@test.com", "secret1"), db.alertMessage)
+        assertFalse(db.lists.single().isDefault)
+        assertTrue(db.deleteList(db.lists.single()))
+        assertTrue(server.tables["list"]!!.isEmpty())
+    }
+
+    @Test
     fun resetPasswordValidationAndSend() = runBlocking {
         db.forgotPasswordEmail = ""
         assertFalse(db.resetPassword()); assertEquals("Email field cannot be empty.", db.alertMessage)

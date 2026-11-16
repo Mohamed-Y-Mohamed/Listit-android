@@ -55,7 +55,7 @@ import com.list_it.app.ui.theme.colorFromHex
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-/** iOS `CompletedView`: a timeline of completed tasks, grouped by day, with undo for today. */
+/** Everything you've finished, grouped by day. Tasks completed today can be undone. */
 @Composable
 fun CompletedScreen(onBack: () -> Unit) {
     val db = LocalDb.current
@@ -79,6 +79,7 @@ fun CompletedScreen(onBack: () -> Unit) {
     val completionPercentage = if (active.isEmpty()) 0.0 else active.count { it.isCompleted }.toDouble() / active.size * 100
     val selectedListTitle = selectedListID?.let { id -> db.lists.firstOrNull { it.id == id }?.listName } ?: "All Lists"
 
+    /** Puts a finished task back to not done. */
     fun uncomplete(task: ToDoTask) = scope.launch {
         if (db.uncompleteTask(task)) {
             if (ReminderStore.date(task.id)?.let { it > Instant.now() } == true) ReminderStore.remove(task.id)
@@ -146,6 +147,7 @@ fun CompletedScreen(onBack: () -> Unit) {
     if (showAlert) IosAlert(db.alertTitle, db.alertMessage, onDismiss = { showAlert = false })
 }
 
+/** One finished task on the timeline, with an Undo button if it was finished today. */
 @Composable
 private fun TimelineRow(task: ToDoTask, isLast: Boolean, onUndo: () -> Unit) {
     val db = LocalDb.current

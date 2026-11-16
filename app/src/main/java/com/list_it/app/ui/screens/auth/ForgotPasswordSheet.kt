@@ -29,13 +29,14 @@ import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
 
-/** iOS `ForgotPasswordView`. */
+/** Sends a password-reset email to the address you type in. */
 @Composable
 fun ColumnScope.ForgotPasswordSheet(dismiss: () -> Unit) {
     val db = LocalDb.current
     val scope = rememberCoroutineScope()
     var showAlert by remember { mutableStateOf(false) }
 
+    /** Sends the reset email and tells you whether it worked. */
     fun forgotPassword() = scope.launch {
         if (db.resetPassword()) dismiss() else showAlert = true
     }

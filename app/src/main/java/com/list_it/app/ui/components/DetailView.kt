@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.ui.theme.LocalPalette
@@ -40,16 +41,16 @@ object ViewColor {
     val danger = Color(0xFFF43F5E)
 }
 
-/** Small uppercase label above a section of the view (web `SectionLabel`). */
+/** A small heading in capitals, like "DUE DATE", above each section. Grey unless you pass a [color]. */
 @Composable
-fun SectionLabel(text: String) {
+fun SectionLabel(text: String, color: Color? = null) {
     Text(
         text.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp,
-        color = if (LocalPalette.current.isDark) WebColor.gray500 else WebColor.gray400,
+        color = color ?: if (LocalPalette.current.isDark) WebColor.gray500 else WebColor.gray400,
     )
 }
 
-/** "Collection  General" style row (web `InfoRow`). */
+/** A label on the left and its value on the right, e.g. "Collection   General". */
 @Composable
 fun InfoRow(label: String, value: String?) {
     val isDark = LocalPalette.current.isDark
@@ -64,7 +65,7 @@ fun InfoRow(label: String, value: String?) {
     }
 }
 
-/** Date pill, red when overdue (web `DateChip`). */
+/** A rounded date tag. It turns red when the date has passed. */
 @Composable
 fun DateChip(label: String, overdue: Boolean) {
     val color = if (overdue) ViewColor.danger else ViewColor.info
@@ -74,19 +75,34 @@ fun DateChip(label: String, overdue: Boolean) {
     )
 }
 
-/** Footer buttons: outlined in a colour, or filled for the main action. */
+/**
+ * A button for the bottom of the task and note pages.
+ * Normally it's a light tinted outline; set [prominent] for the main action and it becomes solid.
+ */
 @Composable
-fun ViewFooterButton(text: String, icon: ImageVector, color: Color, prominent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
+fun ViewFooterButton(
+    text: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    prominent: Boolean = false,
+    enabled: Boolean = true,
+    contentColor: Color? = null,
+    pill: Boolean = false,
+    minHeight: Dp = 44.dp,
+    onClick: () -> Unit,
+) {
+    // [pill] gives fully rounded ends; [contentColor] overrides the icon and text colour.
+    val shape = if (pill) RoundedCornerShape(percent = 50) else RoundedCornerShape(12.dp)
     Row(
-        Modifier.heightIn(min = 44.dp).alpha(if (enabled) 1f else 0.5f).clip(shape)
+        modifier.heightIn(min = minHeight).alpha(if (enabled) 1f else 0.5f).clip(shape)
             .background(if (prominent) color else color.copy(alpha = 0.10f))
             .then(if (prominent) Modifier else Modifier.border(1.dp, color.copy(alpha = 0.35f), shape))
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        val fg = if (prominent) Color.White else color
+        val fg = contentColor ?: if (prominent) Color.White else color
         Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = fg)

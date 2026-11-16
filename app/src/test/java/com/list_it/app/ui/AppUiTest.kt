@@ -357,7 +357,8 @@ class AppUiTest {
         shot("23_note_view")
         click("Edit")
         waitForText("Edit Note")
-        click("Markdown Preview")
+        // Edit shows only the plain text box: no Edit / Markdown Preview tabs.
+        assertTrue(compose.onAllNodesWithText("Markdown Preview").fetchSemanticsNodes().isEmpty())
         shot("24_note_edit")
         click("Save")
         waitForText("Note Details")

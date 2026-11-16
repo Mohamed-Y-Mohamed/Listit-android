@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
-/** Wavy edge used on list cards (iOS `WaveShape`). Values are in px. */
+/** The wavy edge drawn on list cards. Sizes are in pixels. */
 fun wavePath(size: Size, depth: Float, curvature: Float): Path = Path().apply {
     val x = minOf(depth, size.width)
     moveTo(0f, 0f)
@@ -19,7 +19,7 @@ fun wavePath(size: Size, depth: Float, curvature: Float): Path = Path().apply {
     close()
 }
 
-/** Collection header highlight (iOS `DiagonalSliceShape`). */
+/** The slanted coloured strip behind a collection's header. */
 fun diagonalSlicePath(size: Size, skewOffset: Float): Path = Path().apply {
     moveTo(0f, 0f)
     lineTo(size.width, 0f)
@@ -28,7 +28,7 @@ fun diagonalSlicePath(size: Size, skewOffset: Float): Path = Path().apply {
     close()
 }
 
-/** Note card with a folded bottom-right corner (iOS `FoldedNoteShape`). */
+/** The outline of a note card, with its bottom-right corner folded over. */
 class FoldedNoteShape(private val cornerRadius: Float, private val foldSize: Float) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val r = cornerRadius * density.density
@@ -49,7 +49,7 @@ class FoldedNoteShape(private val cornerRadius: Float, private val foldSize: Flo
     }
 }
 
-/** The folded flap triangle (iOS `FoldFlapShape`). */
+/** The small triangle that makes the folded corner on a note card. */
 object FoldFlapShape : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
         Outline.Generic(Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(0f, size.height); close() })

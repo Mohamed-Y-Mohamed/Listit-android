@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens.creating
+package com.list_it.app.ui.screens.collection
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,9 +29,9 @@ import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 
-/** Collection picker for new tasks and notes (iOS `TaskOrganisationRow`). */
+/** A dropdown for choosing which collection a new task or note goes into. */
 @Composable
-fun TaskOrganisationRow(list: TodoList, selectedCollectionID: String?, onSelect: (String) -> Unit) {
+fun CollectionPickerRow(list: TodoList, selectedCollectionID: String?, onSelect: (String) -> Unit) {
     val db = LocalDb.current
     val palette = LocalPalette.current
     var open by remember { mutableStateOf(false) }

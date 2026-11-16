@@ -13,6 +13,7 @@ class ListItApplication : Application() {
     lateinit var db: Supabase
         private set
 
+    /** Runs once when the app starts: sets up settings, saved reminders and notifications. */
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)

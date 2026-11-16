@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,24 +39,38 @@ import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.WebColor
 import com.list_it.app.ui.theme.colorFromHex
 
-// List cards from the web app's Capacitor build (NativeListCard + ListWave), with the
-// wave stretched to 90% of the card and the text kept inside the first 80%.
+// The cards that show each list on the home page:
+//  - GridListCard   "Cards" layout, two per row: a clean tinted card with a coloured icon badge.
+//  - RowListCard    "List" layout, one per row: coloured wave bands on the right-hand side.
+//  - PinnedListCard the small cards in the "Pinned Lists" row.
 
 /** One band of the wave: right edge and bulge as fractions of the width, fill strength per theme. */
 private data class Wave(val depth: Float, val curvature: Float, val dark: Float, val light: Float)
 
-/** The web's three bands (38/31/23%) scaled so the outermost reaches 90% of the card. */
+/** The three wave bands used on the small pinned cards. */
 private val WAVES = listOf(
     Wave(0.90f, 0.164f, 0.16f, 0.14f),
     Wave(0.734f, 0.151f, 0.25f, 0.22f),
     Wave(0.545f, 0.132f, 0.45f, 0.38f),
 )
 
-/** Share of the card the name and counts may use, so text never sits on the wave's edge. */
-private const val TEXT_WIDTH = 0.8f
+/**
+ * The wave bands for the full-width "List" layout. They sit close together near the right edge,
+ * so the colour doesn't stretch across the whole row and the text stays on a plain background.
+ */
+private val ROW_WAVES = listOf(
+    Wave(0.96f, 0.035f, 0.16f, 0.14f),
+    Wave(0.90f, 0.035f, 0.25f, 0.22f),
+    Wave(0.84f, 0.035f, 0.45f, 0.38f),
+)
 
-private fun Modifier.listWave(color: Color, isDark: Boolean) = drawBehind {
-    WAVES.forEach { w ->
+/** How much of the card's width the name and counts may use, so text never sits on the wave. */
+private const val TEXT_WIDTH = 0.8f
+private const val ROW_TEXT_WIDTH = 0.66f
+
+/** Paints the coloured wave behind a list card. */
+private fun Modifier.listWave(color: Color, isDark: Boolean, waves: List<Wave>) = drawBehind {
+    waves.forEach { w ->
         drawPath(
             wavePath(size, size.width * w.depth, size.width * w.curvature),
             color.copy(alpha = if (isDark) w.dark else w.light),
@@ -63,9 +78,9 @@ private fun Modifier.listWave(color: Color, isDark: Boolean) = drawBehind {
     }
 }
 
-/** Card surface, colour border and soft shadow shared by every list card. */
+/** The card's background, coloured border and soft shadow. Pass `waves = null` for a card with no wave. */
 @Composable
-private fun Modifier.listCardSurface(color: Color, radius: Dp = 17.dp): Modifier {
+private fun Modifier.listCardSurface(color: Color, radius: Dp = 17.dp, waves: List<Wave>? = WAVES): Modifier {
     val palette = LocalPalette.current
     val shape = RoundedCornerShape(radius)
     val shadow = Color.Black.copy(alpha = if (palette.isDark) 0.12f else 0.06f)
@@ -73,7 +88,7 @@ private fun Modifier.listCardSurface(color: Color, radius: Dp = 17.dp): Modifier
         .shadow(6.dp, shape, ambientColor = shadow, spotColor = shadow)
         .clip(shape)
         .background(palette.ramp.card)
-        .listWave(color, palette.isDark)
+        .then(if (waves != null) Modifier.listWave(color, palette.isDark, waves) else Modifier.background(color.copy(alpha = if (palette.isDark) 0.14f else 0.10f)))
         .border(0.8.dp, color.copy(alpha = if (palette.isDark) 0.25f else 0.16f), shape)
 }
 
@@ -86,43 +101,52 @@ private fun countsLabel(list: TodoList): String {
     return "$tasks task${if (tasks == 1) "" else "s"} · $notes note${if (notes == 1) "" else "s"}"
 }
 
+/** The colour for a list's name, depending on light or dark mode. */
 @Composable
 private fun nameColor() = if (LocalPalette.current.isDark) Color.White else WebColor.gray900
 
+/** The softer colour for the "3 tasks · 1 note" line on the card view. */
+@Composable
+private fun countsColor() = if (LocalPalette.current.isDark) WebColor.gray400 else WebColor.gray500
+
+/** The little pin icon on pinned lists. */
 @Composable
 private fun PinBadge() = Icon(Icons.Filled.PushPin, "Pinned", tint = WebColor.orange400, modifier = Modifier.size(12.dp))
 
-/** Cards layout: two to a row. */
+/** "Cards" layout, two to a row: a coloured icon badge, then the list's name and how many tasks and notes it has. */
 @Composable
 fun GridListCard(list: TodoList, modifier: Modifier = Modifier) {
     val color = colorFromHex(list.bgColorHex)
-    Box(modifier.fillMaxWidth().heightIn(min = 84.dp).listCardSurface(color)) {
-        Column(
-            Modifier.fillMaxWidth(TEXT_WIDTH).heightIn(min = 84.dp).padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    list.listName.ifEmpty { "Untitled" }, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 19.sp,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis, color = nameColor(), modifier = Modifier.weight(1f, fill = false),
-                )
-                if (list.isPinned) Box(Modifier.padding(top = 3.dp)) { PinBadge() }
+    Column(
+        modifier.fillMaxWidth().heightIn(min = 112.dp).listCardSurface(color, waves = null).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(color), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Checklist, null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
-            Spacer(Modifier.height(8.dp))
-            Text(countsLabel(list), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = nameColor())
+            Spacer(Modifier.weight(1f))
+            if (list.isPinned) PinBadge()
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                list.listName.ifEmpty { "Untitled" }, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 19.sp,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, color = nameColor(),
+            )
+            Text(countsLabel(list), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = countsColor())
         }
     }
 }
 
-/** List layout: one full-width row each. */
+/** "List" layout, one full-width row each, with the wave bands on the right. */
 @Composable
 fun RowListCard(list: TodoList, modifier: Modifier = Modifier) {
     val color = colorFromHex(list.bgColorHex)
     Row(
-        modifier.fillMaxWidth().heightIn(min = 64.dp).listCardSurface(color).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier.fillMaxWidth().heightIn(min = 64.dp).listCardSurface(color, waves = ROW_WAVES).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.fillMaxWidth(TEXT_WIDTH)) {
+        Column(Modifier.fillMaxWidth(ROW_TEXT_WIDTH)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     list.listName.ifEmpty { "Untitled" }, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1,

@@ -24,7 +24,7 @@ import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.components.SegmentedControl
 import kotlinx.coroutines.launch
 
-/** iOS `CreateTaskAIView`: breaks a task down or builds a deep plan. */
+/** Uses on-device AI to turn a task idea into a step-by-step breakdown or a detailed plan. */
 @Composable
 fun ColumnScope.CreateTaskAISheet(
     dismiss: () -> Unit,
@@ -54,7 +54,7 @@ fun ColumnScope.CreateTaskAISheet(
     )
 }
 
-/** iOS `CreateNoteAIView`: outline, template or brainstorm for a note. */
+/** Uses on-device AI to write a note for you: an outline, a template, or a brainstorm. */
 @Composable
 fun ColumnScope.CreateNoteAISheet(
     dismiss: () -> Unit,
@@ -105,6 +105,7 @@ fun ColumnScope.CreateNoteAISheet(
     )
 }
 
+/** The shared layout for both AI writing pages: top bar, mode picker, prompt box and result. */
 @Composable
 private fun AISheetLayout(
     dismiss: () -> Unit,

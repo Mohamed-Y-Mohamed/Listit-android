@@ -21,16 +21,17 @@ import com.list_it.app.ui.components.ContentUnavailable
 import com.list_it.app.ui.components.TaskSection
 import java.time.Instant
 
-/** iOS `TodayView`. */
+/** Tasks due today. */
 @Composable
 fun TodayScreen(onBack: () -> Unit) =
     DueDayScreen("Today", "All Done for Today", Icons.Filled.WbSunny, onBack) { Dates.isToday(it) }
 
-/** iOS `TomorrowView`. */
+/** Tasks due tomorrow. */
 @Composable
 fun TomorrowScreen(onBack: () -> Unit) =
     DueDayScreen("Tomorrow", "Clear Schedule", Icons.Filled.WbTwilight, onBack) { Dates.isTomorrow(it) }
 
+/** Shared page for Today and Tomorrow: shows the tasks due on that day. */
 @Composable
 private fun DueDayScreen(title: String, emptyTitle: String, emptyIcon: ImageVector, onBack: () -> Unit, isDueDay: (Instant) -> Boolean) {
     val db = LocalDb.current

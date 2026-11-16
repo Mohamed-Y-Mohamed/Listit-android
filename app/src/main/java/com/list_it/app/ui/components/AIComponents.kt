@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -53,10 +55,11 @@ import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
 import kotlinx.coroutines.delay
 
-/** Whether on-device AI can run on this device (iOS `#available(iOS 26)` + model availability). */
+/** True if this phone can run the on-device AI model. */
 @Composable
 fun rememberAiAvailable(): Boolean = produceState(false) { value = OnDeviceModel.isAvailable() }.value
 
+/** The rounded box that holds the AI controls. */
 @Composable
 fun AICard(content: @Composable () -> Unit) {
     val palette = LocalPalette.current
@@ -70,6 +73,7 @@ fun AICard(content: @Composable () -> Unit) {
     ) { content() }
 }
 
+/** The text box where you type what you want the AI to do. */
 @Composable
 fun AIPromptInput(
     heading: String,
@@ -100,6 +104,7 @@ fun AIPromptInput(
     }
 }
 
+/** Shows what the AI wrote, with Copy and Regenerate buttons, or a progress message while it's still writing. */
 @Composable
 fun AIOutputSection(
     manager: FoundationModelManager,
@@ -163,29 +168,40 @@ fun AIOutputSection(
     }
 }
 
-/** "Write with AI" capsule, shown only when on-device AI is available (iOS `AIGenerateButton`). */
+/**
+ * The orange "Write with AI" pill, shown in the corner of the description box on the Add forms.
+ * Only appears on phones that support on-device AI.
+ */
 @Composable
 fun AIGenerateButton(title: String = "Write with AI", action: () -> Unit) {
     if (rememberAiAvailable()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TintedButton(title, Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, onClick = action)
-        }
+        TintedButton(title, Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, onClick = action)
     }
 }
 
-/** "AI Features" menu above a description (iOS `AIMenuView`). */
+/** How the orange AI pill looks, shared by "Write with AI" and the "AI Features" menu so they match. */
+@Composable
+private fun AIPill(text: String) {
+    Row(
+        Modifier.clip(CircleShape).background(IosColor.orange.copy(alpha = 0.15f)).heightIn(min = 28.dp).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.AutoAwesome, null, tint = IosColor.orange, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = IosFont.caption.copy(fontWeight = FontWeight.SemiBold), color = IosColor.orange, maxLines = 1)
+    }
+}
+
+/**
+ * The orange "AI Features" pill in the corner of the description box on the Edit pages.
+ * Tapping it opens a menu: rewrite as a list, refine, summarise, or your own prompt.
+ */
 @Composable
 fun AIMenuView(editedDescription: String, onSelect: (AIFeatureMode) -> Unit) {
     if (!rememberAiAvailable()) return
     val enabled = editedDescription.isNotBlank()
     IosMenu(
-        label = {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
-                Icon(Icons.Filled.AutoAwesome, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("AI Features", style = IosFont.subheadline, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
-            }
-        },
+        label = { AIPill("AI Features") },
     ) { close ->
         MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted, enabled = enabled) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
         MenuItem("Refine Description", Icons.Filled.AutoAwesome, enabled = enabled) { close(); onSelect(AIFeatureMode.REFINE) }

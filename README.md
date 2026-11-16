@@ -78,8 +78,18 @@ app/src/main/java/com/list_it/app/
 └── ui/
     ├── theme/      iOS colours and type scale
     ├── components/ Shared UI (sheets, alerts, menus, text fields, colour picker, AI views)
-    └── screens/    Intro, AllLists, ListDetail, auth/, creating/, detail/,
-                    defaultlists/, settings/, ai/
+    └── screens/    One folder per part of the app:
+        ├── home/          The home page (all your lists)
+        ├── list/          A list's page, plus the Add List and Update List forms
+        ├── collection/    Add / Update Collection forms, and the collection picker
+        ├── task/          Task page, Add Task form, colour key
+        ├── note/          Note page and the Add Note form
+        ├── defaultlists/  Built-in lists: Today, Tomorrow, Overdue, Scheduled, …
+        ├── progress/      The Progress tab
+        ├── settings/      The Settings tab
+        ├── onboarding/    Welcome pages and "What's new"
+        ├── auth/          Log in, sign up, forgot password, confirm email
+        └── ai/            On-device AI writing helpers
 ```
 
 ## iOS → Android equivalents

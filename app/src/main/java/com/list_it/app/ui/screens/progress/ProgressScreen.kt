@@ -1,4 +1,4 @@
-package com.list_it.app.ui.screens
+package com.list_it.app.ui.screens.progress
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -57,6 +57,7 @@ private enum class Range(val label: String) { WEEK("7 days"), MONTH("1 month"), 
 
 private data class Bucket(val label: String, val completed: Int, val inProgress: Int)
 
+/** The Progress tab: what share of your tasks are done, your counts of tasks, notes and lists, and an activity chart for the last week, month or year. */
 @Composable
 fun ProgressScreen() {
     val db = LocalDb.current
@@ -201,6 +202,7 @@ fun ProgressScreen() {
     }
 }
 
+/** A simple filled bar showing a fraction (0 to 1). */
 @Composable
 private fun ProgressBar(fraction: Float, color: Color, track: Color, modifier: Modifier = Modifier) {
     val animated by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(500), label = "progress")
@@ -209,6 +211,7 @@ private fun ProgressBar(fraction: Float, color: Color, track: Color, modifier: M
     }
 }
 
+/** A coloured dot with a label, explaining what each bar colour means. */
 @Composable
 private fun LegendDot(color: Color, label: String, textColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {

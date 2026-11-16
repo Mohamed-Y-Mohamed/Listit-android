@@ -32,6 +32,7 @@ object Reminders {
     private lateinit var context: Context
     private lateinit var prefs: Prefs
 
+    /** Sets up the notification channel that reminders are shown in. Call once when the app starts. */
     fun init(context: Context, prefs: Prefs) {
         this.context = context.applicationContext
         this.prefs = prefs
@@ -67,12 +68,14 @@ object Reminders {
     fun pendingDate(taskID: String): Instant? =
         pending()[taskID]?.at?.takeIf { it > System.currentTimeMillis() }?.let(Instant::ofEpochMilli)
 
+    /** Sets every waiting reminder again (needed after the phone restarts). */
     internal fun rescheduleAll() {
         pending().forEach { (id, p) ->
             if (p.at > System.currentTimeMillis()) schedule(id, p.title, Instant.ofEpochMilli(p.at))
         }
     }
 
+    /** Shows the reminder notification for a task. */
     @SuppressLint("MissingPermission") // Checked just below.
     internal fun show(context: Context, taskID: String, title: String) {
         savePending(pending() - taskID)
@@ -96,6 +99,7 @@ object Reminders {
         NotificationManagerCompat.from(context).notify(taskID.hashCode(), notification)
     }
 
+    /** Builds the alarm that will wake the app to show a task's reminder. */
     private fun pendingIntent(taskID: String, title: String): PendingIntent = PendingIntent.getBroadcast(
         context, taskID.hashCode(),
         Intent(context, ReminderReceiver::class.java).putExtra(EXTRA_TASK_ID, taskID).putExtra(EXTRA_TITLE, title),
@@ -105,9 +109,11 @@ object Reminders {
     @kotlinx.serialization.Serializable
     private data class Pending(val title: String, val at: Long)
 
+    /** All reminders that haven't gone off yet, read from storage. */
     private fun pending(): Map<String, Pending> =
         prefs.getString(KEY_PENDING)?.let { runCatching { Json.decodeFromString<Map<String, Pending>>(it) }.getOrNull() } ?: emptyMap()
 
+    /** Saves the reminders that haven't gone off yet. */
     private fun savePending(map: Map<String, Pending>) = prefs.putString(KEY_PENDING, Json.encodeToString(map))
 
     internal fun taskId(intent: Intent) = intent.getStringExtra(EXTRA_TASK_ID)

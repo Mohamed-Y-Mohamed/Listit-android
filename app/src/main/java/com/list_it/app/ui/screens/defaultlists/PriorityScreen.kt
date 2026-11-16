@@ -42,7 +42,7 @@ import com.list_it.app.ui.theme.LocalPalette
 import com.list_it.app.ui.theme.colorFromHex
 import java.time.Instant
 
-/** iOS `PriorityView`: pinned tasks grouped by list. */
+/** Your pinned (high-priority) tasks, grouped by list. */
 @Composable
 fun PriorityScreen(onBack: () -> Unit) {
     val db = LocalDb.current
@@ -80,6 +80,7 @@ fun PriorityScreen(onBack: () -> Unit) {
     }
 }
 
+/** A card for one pinned task. */
 @Composable
 private fun PriorityTaskCard(task: ToDoTask, modifier: Modifier) {
     val db = LocalDb.current

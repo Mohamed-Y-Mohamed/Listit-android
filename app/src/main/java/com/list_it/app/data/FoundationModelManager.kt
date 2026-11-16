@@ -56,14 +56,17 @@ class FoundationModelManager(
         "Rewrite the following text so that it is entirely formatted in a clean bulleted list layout. Do not include conversational filler.\nOriginal Text:\n$it\nFormatted List:"
     }
 
+    /** Asks the AI to tidy up a description: fix grammar and make it clearer. */
     suspend fun refineDescription(description: String) = run(description) {
         "Polish and refine the grammar, tone, and clarity of the following text while strictly preserving its original format and structure. Do not add intro/outro filler.\nOriginal Text:\n$it\nPolished Text:"
     }
 
+    /** Asks the AI to change a description however the user asked in their own words. */
     suspend fun processCustomPrompt(description: String, customPrompt: String) = run(description) {
         "$customPrompt\nTarget Text / Context:\n$it"
     }
 
+    /** Asks the AI for a short summary of a description. */
     suspend fun summarizeDescription(description: String) = run(description) {
         "Summarize the following text concisely, highlighting the core takeaways and key points in a clean, structured overview or bulleted list. Do not include conversational filler or pleasantries.\nOriginal Text:\n$it\nSummary:"
     }
@@ -73,10 +76,12 @@ class FoundationModelManager(
         "You are an expert note-taking assistant. Generate a structured, multi-header outline with clear markdown headers and bullet points for the following topic. Do not include conversational filler or pleasantries. Start directly with the outline.\nTopic: $it\nOutline:"
     }
 
+    /** Asks the AI to write a ready-to-fill template for a note. */
     suspend fun generateSmartTemplate(request: String) = run(request) {
         "You are a smart productivity assistant. Create a comprehensive, well-structured boilerplate template layout with sections, checkboxes, and placeholders based on the following request. Do not include conversational filler. Start directly with the template.\nRequest: $it\nTemplate:"
     }
 
+    /** Asks the AI for a list of ideas from a short starting thought. */
     suspend fun brainstormAndIdeate(spark: String) = run(spark) {
         "You are a creative brainstorming partner. Generate a rich, categorized list of diverse ideas, perspectives, and key considerations based on the following creative spark. Do not include conversational filler. Start directly with the ideas.\nCreative Spark: $it\nBrainstorm Ideas:"
     }
@@ -96,6 +101,7 @@ class FoundationModelManager(
         errorMessage = null
     }
 
+    /** Turns the "AI is writing…" spinner on or off. */
     private fun setGeneratingState(generating: Boolean) {
         isGenerating = generating
         if (generating) {
@@ -104,6 +110,7 @@ class FoundationModelManager(
         }
     }
 
+    /** Sends the prompt to the AI and shows its answer, or a friendly error message if something goes wrong. */
     private suspend fun executeSession(prompt: String) {
         try {
             val text = respond(prompt) { isPreparingModel = true }.trim()
@@ -140,7 +147,7 @@ internal fun friendlyMessage(e: Throwable): String {
     }
 }
 
-/** Removes markdown symbols before copying to the clipboard (iOS `strippingMarkdown`). */
+/** Removes Markdown symbols (like ** and #) so copied text looks clean. */
 fun String.strippingMarkdown(): String = this
     .replace(Regex("(?m)^[ \\t]*#{1,6}[ \\t]*"), "")
     .replace(Regex("\\*{1,2}|_{1,2}"), "")

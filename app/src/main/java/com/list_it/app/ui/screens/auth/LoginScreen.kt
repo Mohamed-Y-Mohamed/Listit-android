@@ -41,7 +41,7 @@ import com.list_it.app.ui.components.IosSheet
 import com.list_it.app.ui.theme.IosColor
 import kotlinx.coroutines.launch
 
-/** iOS `LoginView` flow, in the web app's Capacitor login design. */
+/** The log-in page: email and password, plus links to sign up or reset your password. */
 @Composable
 fun LoginScreen(onSignUp: () -> Unit) {
     val db = LocalDb.current
@@ -52,6 +52,7 @@ fun LoginScreen(onSignUp: () -> Unit) {
 
     LaunchedEffect(Unit) { db.resetFields() }
 
+    /** Checks the email and password and signs you in. */
     fun signUserIn() = scope.launch {
         isLoading = true
         val success = db.signIn(db.email.lowercase().trim(), db.password)

@@ -11,7 +11,7 @@ import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.rememberMarkdownState
 
-/** Renders markdown (iOS MarkdownUI `Markdown`). */
+/** Shows text written in Markdown with its formatting (bold, lists, headings…). */
 @Composable
 fun MarkdownText(content: String, modifier: Modifier = Modifier, fontSize: Int = 17) {
     val palette = LocalPalette.current

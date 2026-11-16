@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
 
 // ---------- Navigation bar ----------
 
-/** Inline navigation bar (iOS `.navigationBarTitleDisplayMode(.inline)`). */
+/** The bar at the top of a page: a title in the middle, buttons on the left and right. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IosTopBar(
@@ -139,7 +139,7 @@ fun IosSheet(
 
 data class AlertButton(val text: String, val destructive: Boolean = false, val cancel: Boolean = false, val action: () -> Unit = {})
 
-/** iOS `.alert`. Buttons appear right to left like the system dialog. */
+/** A pop-up message box with one or more buttons (e.g. "Delete Task?"). */
 @Composable
 fun IosAlert(title: String, message: String, onDismiss: () -> Unit, buttons: List<AlertButton> = listOf(AlertButton("OK", cancel = true))) {
     AlertDialog(
@@ -164,7 +164,7 @@ fun IosAlert(title: String, message: String, onDismiss: () -> Unit, buttons: Lis
 
 // ---------- Menus ----------
 
-/** Content that opens a menu on long press (iOS `.contextMenu`) and reacts to taps. */
+/** Wraps something so a long press opens a menu, while a normal tap still works as usual. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ContextMenuBox(
@@ -182,7 +182,7 @@ fun ContextMenuBox(
     }
 }
 
-/** A tap-to-open menu (iOS `Menu`). */
+/** A button that opens a dropdown menu when tapped. */
 @Composable
 fun IosMenu(label: @Composable () -> Unit, items: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -192,6 +192,7 @@ fun IosMenu(label: @Composable () -> Unit, items: @Composable ColumnScope.(close
     }
 }
 
+/** One option inside a dropdown menu. Red when it's a destructive action like Delete. */
 @Composable
 fun MenuItem(
     text: String,
@@ -211,12 +212,13 @@ fun MenuItem(
     )
 }
 
+/** A thin line separating groups of menu options. */
 @Composable
 fun MenuDivider() = HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalPalette.current.separator)
 
 // ---------- Content ----------
 
-/** iOS `ContentUnavailableView`. */
+/** The "nothing here yet" message shown when a page is empty. */
 @Composable
 fun ContentUnavailable(
     title: String,
@@ -239,7 +241,7 @@ fun ContentUnavailable(
     }
 }
 
-/** iOS `.searchable` search field. */
+/** A rounded search box. */
 @Composable
 fun SearchField(text: String, onTextChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
@@ -274,7 +276,7 @@ fun SearchField(text: String, onTextChange: (String) -> Unit, placeholder: Strin
     }
 }
 
-/** Single-line text field without decoration (iOS plain `TextField`). */
+/** A plain one-line text box with no border, used for titles. */
 @Composable
 fun PlainTextField(
     value: String,
@@ -299,12 +301,13 @@ fun PlainTextField(
     }
 }
 
+/** A thin grey line between sections. */
 @Composable
 fun IosDivider(modifier: Modifier = Modifier) = HorizontalDivider(modifier, thickness = 0.5.dp, color = LocalPalette.current.separator)
 
 // ---------- Buttons ----------
 
-/** iOS `.buttonStyle(.bordered)` / `.borderedProminent` with a tint. */
+/** A coloured button. Light-tinted by default, solid when [prominent] is true. */
 @Composable
 fun TintedButton(
     text: String,
@@ -344,7 +347,7 @@ fun TintedButton(
     }
 }
 
-/** iOS `Toggle` row with a label and green switch. */
+/** A row with an icon, a label and an on/off switch. */
 @Composable
 fun ToggleRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String, icon: ImageVector, tint: Color = IosColor.green) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

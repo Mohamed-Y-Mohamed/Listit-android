@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.list_it.app.ui.ListItApp
 
 class MainActivity : ComponentActivity() {
+    /** Opens the app's single window and draws the whole app inside it. */
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)

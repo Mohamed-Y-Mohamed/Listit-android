@@ -35,7 +35,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.UUID
 
-/** App state and every Supabase call, mirroring the iOS `Supabase` class one to one. */
+/** Holds the app's data and does all the talking to the online database (load, add, edit, delete). */
 class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
 
     var alertTitle by mutableStateOf("")
@@ -276,7 +276,10 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
     suspend fun fetchUserLists(): Boolean = try {
         val uid = authUserId()
         lists = emptyList()
+        // Only the smart lists built into the app (Today, Overdue…) count as "default".
+        // Anything stored in the database is the user's own list, so they can always add to it or delete it.
         lists = client.from("list").select { filter { eq("user_id", uid) } }.decodeList<TodoList>()
+            .map { it.copy(isDefault = false) }
         true
     } catch (e: Exception) {
         rethrowIfCancelled(e)
@@ -637,6 +640,7 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
         false
     }
 
+    /** The ID of the person who is signed in. */
     private suspend fun authUserId(): String = client.auth.retrieveUserForCurrentSession(updateSession = true).id
 
     companion object {
@@ -644,11 +648,13 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
             Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$")
         private val NAME_REGEX = Regex("^[a-zA-Z]+(?: [a-zA-Z]+)*$")
 
+        /** Builds one of the built-in lists (Today, Tomorrow, Priority and so on). */
         private fun defaultList(icon: String, name: String, hex: String) = TodoList(
             id = UUID.randomUUID().toString(), createdAt = Instant.now(), listIcon = icon, listName = name,
             isDefault = true, bgColorHex = hex, userId = "", isPinned = false,
         )
 
+        /** Lets "cancelled" errors pass through so leaving a screen stops its work properly. */
         private fun rethrowIfCancelled(e: Exception) {
             if (e is CancellationException) throw e
         }

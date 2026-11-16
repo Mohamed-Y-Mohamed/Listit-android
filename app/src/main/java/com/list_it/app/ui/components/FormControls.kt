@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -172,7 +173,7 @@ fun CustomTextField(
     }
 }
 
-/** Icon + text field row (iOS `InputField`). */
+/** A text box with an icon in front of it. */
 @Composable
 fun InputField(icon: ImageVector, text: String, onTextChange: (String) -> Unit, placeholder: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -182,31 +183,51 @@ fun InputField(icon: ImageVector, text: String, onTextChange: (String) -> Unit, 
     }
 }
 
-/** Multi-line description editor with placeholder (iOS `TextEditor` + overlay text). */
+/**
+ * A multi-line text box for descriptions, with grey hint text when it's empty.
+ * It always shows the raw text you type (Markdown is only formatted on the read-only pages).
+ * [aiButton] goes in the bottom-right corner inside the box, used for the orange AI button.
+ * With [fillHeight], the box fills the space it's given and long text scrolls inside it,
+ * so the title above and the buttons below stay on screen.
+ */
 @Composable
-fun DescriptionEditor(text: String, onTextChange: (String) -> Unit, placeholder: String, minHeight: Int, fontSize: Int = 13, dimmed: Boolean = false) {
+fun DescriptionEditor(
+    text: String,
+    onTextChange: (String) -> Unit,
+    placeholder: String,
+    minHeight: Int,
+    fontSize: Int = 13,
+    dimmed: Boolean = false,
+    modifier: Modifier = Modifier,
+    fillHeight: Boolean = false,
+    aiButton: (@Composable () -> Unit)? = null,
+) {
     val palette = LocalPalette.current
-    Box(Modifier.fillMaxWidth().heightIn(min = minHeight.dp).padding(top = 8.dp, start = 5.dp)) {
-        if (text.isEmpty()) Text(placeholder, fontSize = fontSize.sp, color = palette.secondary, modifier = Modifier.clearAndSetSemantics {})
-        BasicTextField(
-            value = text,
-            onValueChange = onTextChange,
-            textStyle = IosFont.body.copy(fontSize = fontSize.sp, lineHeight = (fontSize + 5).sp, color = if (dimmed) palette.secondary else palette.primary),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth().heightIn(min = minHeight.dp).semantics { contentDescription = placeholder },
-        )
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier.fillMaxWidth().clip(shape)
+            .background(if (palette.isDark) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f))
+            .border(1.dp, palette.ramp.border, shape)
+            .padding(start = 12.dp, end = 10.dp, top = 10.dp, bottom = 8.dp),
+    ) {
+        Box(if (fillHeight) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().heightIn(min = minHeight.dp)) {
+            if (text.isEmpty()) Text(placeholder, fontSize = fontSize.sp, color = palette.secondary, modifier = Modifier.clearAndSetSemantics {})
+            BasicTextField(
+                value = text,
+                onValueChange = onTextChange,
+                textStyle = IosFont.body.copy(fontSize = fontSize.sp, lineHeight = (fontSize + 5).sp, color = if (dimmed) palette.secondary else palette.primary),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = (if (fillHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth().heightIn(min = minHeight.dp))
+                    .semantics { contentDescription = placeholder },
+            )
+        }
+        if (aiButton != null) {
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) { aiButton() }
+        }
     }
 }
 
-/** "Edit" / "Markdown Preview" tabs (iOS `DescriptionModeSwitcher`). */
-@Composable
-fun DescriptionModeSwitcher(isPreview: Boolean, onChange: (Boolean) -> Unit, accent: Color = IosColor.orange) {
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        UnderlineTab("Edit", !isPreview, accent) { onChange(false) }
-        UnderlineTab("Markdown Preview", isPreview, accent) { onChange(true) }
-    }
-}
-
+/** One tab with a coloured underline when it's selected. */
 @Composable
 fun UnderlineTab(title: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
     val palette = LocalPalette.current

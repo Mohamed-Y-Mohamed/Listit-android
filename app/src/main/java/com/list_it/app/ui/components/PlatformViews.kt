@@ -17,7 +17,7 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.list_it.app.R
 
-/** Asks for notification permission once (iOS `requestAuthorization`). */
+/** Asks the user once if the app may send notifications (needed for reminders). */
 @Composable
 fun RequestNotificationPermission() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
@@ -25,14 +25,14 @@ fun RequestNotificationPermission() {
     LaunchedEffect(Unit) { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }
 }
 
-/** Looping email animation on the verification screen (iOS LottieView). */
+/** The looping envelope animation on the "check your email" page. */
 @Composable
 fun EmailAnimation(modifier: Modifier = Modifier) {
     val composition = rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.email_animation)).value
     LottieAnimation(composition, iterations = LottieConstants.IterateForever, modifier = modifier)
 }
 
-/** System share sheet (iOS `ShareLink`). */
+/** Opens Android's share menu so you can send text to another app. */
 @Composable
 fun rememberShareAction(): (subject: String, text: String) -> Unit {
     val context = LocalContext.current
@@ -44,7 +44,7 @@ fun rememberShareAction(): (subject: String, text: String) -> Unit {
     }
 }
 
-/** Opens the calendar app's new event screen pre-filled (iOS `EKEventEditViewController`). */
+/** Opens your calendar app with a new event already filled in with the task's title and notes. */
 @Composable
 fun rememberAddToCalendarAction(): (title: String, notes: String) -> Unit {
     val context = LocalContext.current
