@@ -63,7 +63,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -271,10 +271,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
                     val w = size.width * highlightWidth
                     drawPath(
                         diagonalSlicePath(Size(w, size.height), skew.dp.toPx()),
-                        Brush.horizontalGradient(
-                            listOf(color.copy(alpha = if (isDark) 0.40f else 0.20f), color.copy(alpha = if (isDark) 0.20f else 0.10f)),
-                            endX = w,
-                        ),
+                        SolidColor(color.copy(alpha = if (isDark) 0.25f else 0.16f)),
                     )
                 }
                 .clickable { isExpandedState = !isExpanded }
@@ -532,7 +529,7 @@ private fun NoteView(note: Note) {
                 .fillMaxSize()
                 .shadow(3.dp, shape, ambientColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.12f), spotColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.12f))
                 .background(palette.systemBackground, shape)
-                .background(Brush.linearGradient(listOf(color.copy(alpha = if (isDark) 0.50f else 0.40f), color.copy(alpha = if (isDark) 0.28f else 0.20f))), shape)
+                .background(color.copy(alpha = 0.08f), shape)
                 .border(0.8.dp, color.copy(alpha = 0.35f), shape)
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),

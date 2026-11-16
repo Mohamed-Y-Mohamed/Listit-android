@@ -184,7 +184,7 @@ fun AIMenuView(editedDescription: String, onSelect: (AIFeatureMode) -> Unit) {
     val enabled = editedDescription.isNotBlank()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         IosMenu(
-            label = { TintedButton("AI Features", Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, enabled = enabled) },
+            label = { TintedButton("Edit with AI", Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, enabled = enabled) },
             shape = CircleShape,
             enabled = enabled,
         ) { close ->

@@ -83,6 +83,7 @@ if (!keystoreFile.exists() && !hasInjectedSigning) {
 }
 
 dependencies {
+    implementation(libs.material3)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(platform(libs.compose.bom))
