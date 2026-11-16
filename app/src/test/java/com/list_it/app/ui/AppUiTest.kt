@@ -1,6 +1,7 @@
 package com.list_it.app.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -255,18 +256,18 @@ class AppUiTest {
         waitForText("Your Lists")
         shot("14_home_rows_velvet")
 
-        // Rows swipe left for Pin, Edit and Delete; the actions sit behind the card.
-        assertEquals(0, compose.onAllNodesWithText("Delete").fetchSemanticsNodes().size)
+        // Rows swipe left for Pin, Edit and Delete, as a circle each behind the card.
+        fun circles(label: String) = compose.onAllNodes(hasContentDescription(label)).fetchSemanticsNodes().size
+        assertEquals(0, circles("Delete"))
         compose.onAllNodesWithText("School")[0].performTouchInput { swipeLeft() }
-        compose.waitForIdle()
-        waitForText("Delete")
-        waitForText("Edit")
-        waitForText("Pin")
+        compose.waitUntil(10_000) { circles("Delete") > 0 }
+        assertEquals(1, circles("Pin"))
+        assertEquals(1, circles("Edit"))
         shot("14b_home_row_swiped")
 
         // Tapping the open row closes it again rather than opening the list.
         compose.onAllNodesWithText("School")[0].performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Delete").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(10_000) { circles("Delete") == 0 }
         waitForText("Your Lists")
     }
 

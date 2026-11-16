@@ -10,15 +10,12 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -38,7 +35,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.list_it.app.ui.theme.IosFont
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -50,9 +46,8 @@ private const val FlickVelocity = 400f
 
 private val Settle = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
-/** Gap before each tile, so they read as separate buttons rather than one bar. */
-private val TileGap = 8.dp
-private val TileShape = RoundedCornerShape(14.dp)
+/** Gap before each circle, so they read as separate buttons rather than one bar. */
+private val TileGap = 12.dp
 
 /**
  * A row that slides left to reveal [actions] (iOS `.swipeActions`). Tapping an open row
@@ -67,7 +62,7 @@ fun SwipeRevealRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(18.dp),
-    actionWidth: Dp = 64.dp,
+    actionWidth: Dp = 48.dp,
     content: @Composable () -> Unit,
 ) {
     if (actions.isEmpty()) {
@@ -75,7 +70,7 @@ fun SwipeRevealRow(
         return
     }
 
-    // Each tile carries its own gap, so the strip is n * (tile + gap) wide.
+    // Each circle carries its own gap, so the strip is n * (diameter + gap) wide.
     val maxOffset = with(LocalDensity.current) { ((actionWidth + TileGap) * actions.size).toPx() }
     val offset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -94,30 +89,24 @@ fun SwipeRevealRow(
             }
         },
     ) {
-        // Separate tiles, each rounded in its own right. They sit outside the card's clip
-        // so its outline cannot shave their corners.
+        // A full circle each, outside the card's clip so its outline cannot shave them.
+        // The label rides on the icon as its description, since there is no room to print it.
         if (revealed) {
             Row(
                 Modifier.matchParentSize(),
                 horizontalArrangement = Arrangement.spacedBy(TileGap, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.forEach { action ->
                     Box(
                         Modifier
-                            .fillMaxHeight()
-                            .width(actionWidth)
-                            .clip(TileShape)
+                            .size(actionWidth)
+                            .clip(CircleShape)
                             .background(action.color)
                             .clickable { close(); action.onClick() },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Icon(action.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                            Text(action.label, style = IosFont.caption2, color = Color.White, maxLines = 1)
-                        }
+                        Icon(action.icon, action.label, tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                 }
             }
