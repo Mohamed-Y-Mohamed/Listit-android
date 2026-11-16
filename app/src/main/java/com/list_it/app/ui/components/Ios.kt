@@ -1,5 +1,7 @@
 package com.list_it.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,12 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -60,6 +62,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -240,7 +243,7 @@ fun ContextMenuBox(
     Box(modifier.combinedClickable(onClick = onClick, onLongClick = { if (menu != null) open = true })) {
         content()
         if (menu != null) {
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) { menu { open = false } }
+            AnchoredMenu(expanded = open, onDismissRequest = { open = false }) { menu { open = false } }
         }
     }
 }
@@ -256,7 +259,7 @@ fun IosMenu(
     var open by remember { mutableStateOf(false) }
     Box {
         Box(Modifier.clip(shape).clickable(enabled = enabled) { open = true }) { label() }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) { items { open = false } }
+        AnchoredMenu(expanded = open, onDismissRequest = { open = false }) { items { open = false } }
     }
 }
 
@@ -269,18 +272,58 @@ fun MenuItem(
     checked: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val color = if (destructive) IosColor.red else LocalPalette.current.primary
+    val palette = LocalPalette.current
+    val color = if (destructive) IosColor.red else palette.primary
     DropdownMenuItem(
-        text = { Text(text, color = if (enabled) color else LocalPalette.current.tertiary) },
+        text = { Text(text, style = IosFont.body, color = if (enabled) color else palette.tertiary, maxLines = 1) },
         onClick = onClick,
         enabled = enabled,
-        leadingIcon = if (checked) ({ Icon(Icons.Filled.Check, null, Modifier.size(18.dp)) }) else null,
-        trailingIcon = icon?.let { { Icon(it, null, tint = if (enabled) color else LocalPalette.current.tertiary, modifier = Modifier.size(20.dp)) } },
+        leadingIcon = if (checked) ({ Icon(Icons.Filled.Check, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }) else null,
+        trailingIcon = icon?.let { { Icon(it, null, tint = if (enabled) color else palette.tertiary, modifier = Modifier.size(20.dp)) } },
+        contentPadding = PaddingValues(horizontal = 14.dp),
     )
 }
 
+/**
+ * Menu row that expands its own [children] in place, with a chevron that turns to show
+ * the state. Used where a flat list of items would be too long to sit in the menu.
+ */
 @Composable
-fun MenuDivider() = HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalPalette.current.separator)
+fun SubMenuItem(
+    text: String,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    children: @Composable ColumnScope.() -> Unit,
+) {
+    val palette = LocalPalette.current
+    var open by remember { mutableStateOf(false) }
+    val turn by animateFloatAsState(if (open) 90f else 0f, label = "submenu chevron")
+    DropdownMenuItem(
+        text = { Text(text, style = IosFont.body, color = if (enabled) palette.primary else palette.tertiary, maxLines = 1) },
+        onClick = { open = !open },
+        enabled = enabled,
+        leadingIcon = icon?.let { { Icon(it, null, tint = if (enabled) palette.primary else palette.tertiary, modifier = Modifier.size(20.dp)) } },
+        trailingIcon = {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = palette.secondary,
+                modifier = Modifier.size(18.dp).rotate(turn),
+            )
+        },
+        contentPadding = PaddingValues(horizontal = 14.dp),
+    )
+    AnimatedVisibility(open) {
+        Column(
+            Modifier
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (palette.isDark) Color.White.copy(alpha = 0.05f) else Color.Black.copy(alpha = 0.035f)),
+            content = children,
+        )
+    }
+}
+
+@Composable
+fun MenuDivider() = HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = LocalPalette.current.separator)
 
 // ---------- Content ----------
 

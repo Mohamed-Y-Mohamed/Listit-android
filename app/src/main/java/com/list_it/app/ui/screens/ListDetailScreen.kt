@@ -44,7 +44,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -90,7 +89,9 @@ import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
 import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.components.MenuDivider
+import com.list_it.app.ui.components.AnchoredMenu
 import com.list_it.app.ui.components.MenuItem
+import com.list_it.app.ui.components.SubMenuItem
 import com.list_it.app.ui.components.SearchField
 import com.list_it.app.ui.components.UnderlineTab
 import com.list_it.app.ui.components.diagonalSlicePath
@@ -126,7 +127,7 @@ fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
                     IconButton(onClick = { showTaskInfo = true }) { Icon(Icons.Outlined.Info, "Task Info", tint = MaterialTheme.colorScheme.primary) }
                     Box {
                         IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreHoriz, "More", tint = MaterialTheme.colorScheme.primary) }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        AnchoredMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             MenuItem("Add Task", Icons.Filled.Edit) { menuOpen = false; showAddTask = true }
                             MenuItem("Add Note", Icons.AutoMirrored.Filled.Notes) { menuOpen = false; showAddNote = true }
                             MenuItem("Add Collection", Icons.Outlined.Folder) { menuOpen = false; showAddCollection = true }
@@ -393,13 +394,9 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
 /** "Move …" submenu listing the collections of the same list. */
 @Composable
 private fun MoveMenu(collections: List<ListCollection>, currentID: String, title: String, onMove: (ListCollection) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        MenuItem(title, Icons.Filled.DriveFileMove) { open = true }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            collections.forEach { c ->
-                MenuItem(c.collectionName, enabled = c.id != currentID, checked = c.id == currentID) { open = false; onMove(c) }
-            }
+    SubMenuItem(title, Icons.Filled.DriveFileMove) {
+        collections.forEach { c ->
+            MenuItem(c.collectionName, enabled = c.id != currentID, checked = c.id == currentID) { onMove(c) }
         }
     }
 }

@@ -348,6 +348,23 @@ class AppUiTest {
     }
 
     @Test
+    fun taskContextMenuMoveSubmenuExpandsInPlace() {
+        launchSignedIn()
+        compose.onAllNodesWithText("Work")[0].performClick()
+        waitForText("Hold items for more options")
+        click("General")
+        waitForText("Prepare slides")
+
+        // Long press opens the menu; Move is a row that expands its collections in place.
+        compose.onAllNodesWithText("Prepare slides")[0].performTouchInput { longClick() }
+        waitForText("Move Task")
+        val before = compose.onAllNodesWithText("Projects").fetchSemanticsNodes().size
+        click("Move Task")
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Projects").fetchSemanticsNodes().size > before }
+        shot("18b_move_submenu")
+    }
+
+    @Test
     fun addTaskAndNoteViewEdit() {
         launchSignedIn()
         compose.onAllNodesWithText("Work")[0].performClick()

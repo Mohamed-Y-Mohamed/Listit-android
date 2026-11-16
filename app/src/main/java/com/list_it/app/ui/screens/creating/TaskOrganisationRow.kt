@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.LocalDb
+import com.list_it.app.ui.components.AnchoredMenu
 import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.theme.IosFont
 import com.list_it.app.ui.theme.LocalPalette
@@ -43,7 +43,7 @@ fun TaskOrganisationRow(list: TodoList, selectedCollectionID: String?, onSelect:
             Text(db.collections.firstOrNull { it.id == selectedCollectionID }?.collectionName ?: "General", style = IosFont.body, color = palette.secondary)
             Icon(Icons.Filled.UnfoldMore, null, tint = palette.secondary, modifier = Modifier.size(14.dp))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        AnchoredMenu(expanded = open, onDismissRequest = { open = false }) {
             db.collections.filter { it.listID == list.id }.forEach { c ->
                 MenuItem(c.collectionName, Icons.Outlined.Folder) { open = false; onSelect(c.id) }
             }

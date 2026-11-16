@@ -50,6 +50,10 @@ private const val FlickVelocity = 400f
 
 private val Settle = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
+/** Gap before each tile, so they read as separate buttons rather than one bar. */
+private val TileGap = 8.dp
+private val TileShape = RoundedCornerShape(14.dp)
+
 /**
  * A row that slides left to reveal [actions] (iOS `.swipeActions`). Tapping an open row
  * closes it; tapping a closed one runs [onClick].
@@ -63,7 +67,7 @@ fun SwipeRevealRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(18.dp),
-    actionWidth: Dp = 72.dp,
+    actionWidth: Dp = 64.dp,
     content: @Composable () -> Unit,
 ) {
     if (actions.isEmpty()) {
@@ -71,7 +75,8 @@ fun SwipeRevealRow(
         return
     }
 
-    val maxOffset = with(LocalDensity.current) { (actionWidth * actions.size).toPx() }
+    // Each tile carries its own gap, so the strip is n * (tile + gap) wide.
+    val maxOffset = with(LocalDensity.current) { ((actionWidth + TileGap) * actions.size).toPx() }
     val offset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val close = { scope.launch { offset.animateTo(0f, Settle) } }
@@ -83,21 +88,25 @@ fun SwipeRevealRow(
     LaunchedEffect(maxOffset) { if (offset.value < -maxOffset) offset.snapTo(-maxOffset) }
 
     Box(
-        modifier
-            .clip(shape)
-            .semantics {
-                customActions = actions.map { action ->
-                    CustomAccessibilityAction(action.label) { action.onClick(); true }
-                }
-            },
+        modifier.semantics {
+            customActions = actions.map { action ->
+                CustomAccessibilityAction(action.label) { action.onClick(); true }
+            }
+        },
     ) {
+        // Separate tiles, each rounded in its own right. They sit outside the card's clip
+        // so its outline cannot shave their corners.
         if (revealed) {
-            Row(Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
+            Row(
+                Modifier.matchParentSize(),
+                horizontalArrangement = Arrangement.spacedBy(TileGap, Alignment.End),
+            ) {
                 actions.forEach { action ->
                     Box(
                         Modifier
                             .fillMaxHeight()
                             .width(actionWidth)
+                            .clip(TileShape)
                             .background(action.color)
                             .clickable { close(); action.onClick() },
                         contentAlignment = Alignment.Center,
@@ -113,21 +122,24 @@ fun SwipeRevealRow(
                 }
             }
         }
-        Box(
-            Modifier
-                .offset { IntOffset(offset.value.roundToInt(), 0) }
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        scope.launch { offset.snapTo((offset.value + delta).coerceIn(-maxOffset, 0f)) }
-                    },
-                    onDragStopped = { velocity ->
-                        val open = velocity < -FlickVelocity ||
-                            (velocity <= FlickVelocity && offset.value < -maxOffset / 2f)
-                        offset.animateTo(if (open) -maxOffset else 0f, Settle)
-                    },
-                )
-                .clickable { if (offset.value < -1f) close() else onClick() },
-        ) { content() }
+        // This Box sizes the row and clips the card as it slides out of view.
+        Box(Modifier.clip(shape)) {
+            Box(
+                Modifier
+                    .offset { IntOffset(offset.value.roundToInt(), 0) }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            scope.launch { offset.snapTo((offset.value + delta).coerceIn(-maxOffset, 0f)) }
+                        },
+                        onDragStopped = { velocity ->
+                            val open = velocity < -FlickVelocity ||
+                                (velocity <= FlickVelocity && offset.value < -maxOffset / 2f)
+                            offset.animateTo(if (open) -maxOffset else 0f, Settle)
+                        },
+                    )
+                    .clickable { if (offset.value < -1f) close() else onClick() },
+            ) { content() }
+        }
     }
 }

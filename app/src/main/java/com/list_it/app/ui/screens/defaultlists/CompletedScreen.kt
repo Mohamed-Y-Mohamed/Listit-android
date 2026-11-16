@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +46,7 @@ import com.list_it.app.ui.components.ContentUnavailable
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.MenuDivider
+import com.list_it.app.ui.components.AnchoredMenu
 import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
@@ -102,7 +102,7 @@ fun CompletedScreen(onBack: () -> Unit) {
                 Spacer(Modifier.width(6.dp))
                 Icon(Icons.Filled.KeyboardArrowDown, null, tint = palette.secondary, modifier = Modifier.size(14.dp))
             }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            AnchoredMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 MenuItem("All Lists", checked = selectedListID == null) { menuOpen = false; selectedListID = null }
                 MenuDivider()
                 db.lists.forEach { list ->
