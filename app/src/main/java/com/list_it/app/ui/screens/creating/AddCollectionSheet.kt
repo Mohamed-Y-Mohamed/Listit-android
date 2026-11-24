@@ -64,12 +64,9 @@ fun ColumnScope.AddCollectionSheet(list: TodoList, dismiss: () -> Unit) {
         }
         val finalColorHex = selectedColorHex.ifEmpty { list.bgColorHex }
         val newCollection = ListCollection(UUID.randomUUID().toString().lowercase(), Instant.now(), collectionName, finalColorHex, list.id, "")
+        // saveCollection adds the row to local state, so the new collection shows without a refetch.
         scope.launch {
-            if (!db.saveCollection(newCollection)) {
-                showAlert = true
-                return@launch
-            }
-            if (db.fetchUserCollections()) dismiss() else showAlert = true
+            if (db.saveCollection(newCollection)) dismiss() else showAlert = true
         }
     }
 

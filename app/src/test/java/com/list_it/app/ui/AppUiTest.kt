@@ -23,6 +23,7 @@ import com.list_it.app.data.Prefs
 import com.list_it.app.data.Supabase
 import com.list_it.app.data.createListItClient
 import com.list_it.app.data.testPrefs
+import com.list_it.app.model.CollectionLayout
 import com.list_it.app.model.SurfaceChoice
 import com.list_it.app.model.ListDisplayStyle
 import kotlinx.coroutines.runBlocking
@@ -226,6 +227,10 @@ class AppUiTest {
         assertEquals(SurfaceChoice.WARM, prefs.surface(true))
         compose.onNodeWithText("One full-width row each").performClick()
         assertEquals(ListDisplayStyle.LIST, prefs.displayStyle)
+        click("Stacked cards that open one at a time")
+        assertEquals(CollectionLayout.EXPANDABLE, prefs.collectionLayout)
+        click("Swipe sideways through full-height collections")
+        assertEquals(CollectionLayout.COLUMNS, prefs.collectionLayout)
         shot("11_appearance_dark")
 
         // Profile: rename
@@ -346,6 +351,66 @@ class AppUiTest {
         click("Complete")
         compose.waitUntil(10_000) { db.tasks.first { it.id == "t1" }.isCompleted }
         assertTrue(server.tables["task"]!!.first { it["id"]!!.jsonPrimitive.content == "t1" }["is_completed"]!!.jsonPrimitive.content == "true")
+    }
+
+    /** The columns layout is the default: a collection's tasks are in view with nothing to open. */
+    @Test
+    fun collectionColumnsShowTasksWithoutOpeningAnything() {
+        launchSignedIn()
+        assertEquals(CollectionLayout.COLUMNS, prefs.collectionLayout)
+        compose.onAllNodesWithText("Work")[0].performClick()
+        waitForText("Hold items for more options")
+        waitForText("General")
+        // The header counts what the column holds, and the rows are already there.
+        waitForText("2 Tasks · 1 Notes")
+        waitForText("Prepare slides")
+        shot("18c_collection_columns")
+    }
+
+    /** The expandable layout keeps the tap-to-open behaviour, and both layouts share the rows. */
+    @Test
+    fun expandableLayoutStillOpensOnTap() {
+        prefs.collectionLayout = CollectionLayout.EXPANDABLE
+        launchSignedIn()
+        compose.onAllNodesWithText("Work")[0].performClick()
+        waitForText("Hold items for more options")
+        assertTrue(compose.onAllNodesWithText("Prepare slides").fetchSemanticsNodes().isEmpty())
+        click("General")
+        waitForText("Prepare slides")
+    }
+
+    /** An empty tab offers the create button, and the new row lands in that collection. */
+    @Test
+    fun emptyCollectionOffersCreateTask() {
+        launchSignedIn()
+        // Home's only task is completed, so its task tab is empty.
+        compose.onAllNodesWithText("Home")[0].performClick()
+        waitForText("No Tasks")
+        click("Create Task")
+        compose.waitUntil(10_000) { compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Task title")).fetchSemanticsNodes().isNotEmpty() }
+        type("Task title", "Hoover the stairs")
+        click("Create")
+        compose.waitUntil(10_000) { db.tasks.any { it.text == "Hoover the stairs" } }
+        // Pre-targeted at the collection the button was pressed in, not General-by-name luck.
+        assertEquals("c4", db.tasks.first { it.text == "Hoover the stairs" }.collectionID)
+        // And the row is on screen without reopening the list.
+        waitForText("Hoover the stairs")
+    }
+
+    @Test
+    fun emptyCollectionOffersCreateNote() {
+        launchSignedIn()
+        compose.onAllNodesWithText("School")[0].performClick()
+        waitForText("Maths homework")
+        click("Notes")
+        waitForText("No Notes")
+        click("Create Note")
+        compose.waitUntil(10_000) { compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Note title")).fetchSemanticsNodes().isNotEmpty() }
+        type("Note title", "Revision plan")
+        click("Create")
+        compose.waitUntil(10_000) { db.notes.any { it.title == "Revision plan" } }
+        assertEquals("c3", db.notes.first { it.title == "Revision plan" }.collectionID)
+        waitForText("Revision plan")
     }
 
     @Test

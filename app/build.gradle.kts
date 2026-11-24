@@ -21,8 +21,8 @@ android {
         applicationId = "com.list_it.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.6.0"
+        versionCode = 18
+        versionName = "1.8.0"
 
         buildConfigField("String", "SUPABASE_URL", "\"${property("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_KEY", "\"${property("SUPABASE_KEY")}\"")

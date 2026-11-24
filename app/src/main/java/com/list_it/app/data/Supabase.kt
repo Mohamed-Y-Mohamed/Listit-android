@@ -262,9 +262,13 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
     }
 
     // MARK: - Save List with General collection
+    // Every save adds the inserted row to local state, exactly as update/delete do. Callers must
+    // not append it themselves: a create path that forgot to leaves the screen showing stale counts.
     suspend fun saveList(newList: TodoList, generalCollection: ListCollection): Boolean = try {
         val ownerId = currentUser!!.id
-        client.from("list").insert(newList.copy(userId = ownerId))
+        val owned = newList.copy(userId = ownerId)
+        client.from("list").insert(owned)
+        lists = lists + owned
         saveCollection(generalCollection.copy(userID = ownerId))
     } catch (e: Exception) {
         rethrowIfCancelled(e)
@@ -331,7 +335,9 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
 
     // MARK: - Save Collection
     suspend fun saveCollection(newCollection: ListCollection): Boolean = try {
-        client.from("collection").insert(newCollection.copy(userID = currentUser!!.id))
+        val owned = newCollection.copy(userID = currentUser!!.id)
+        client.from("collection").insert(owned)
+        collections = collections + owned
         true
     } catch (e: Exception) {
         rethrowIfCancelled(e)
@@ -378,7 +384,9 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
 
     // MARK: - Save Task
     suspend fun saveTask(newTask: ToDoTask): Boolean = try {
-        client.from("task").insert(newTask.copy(userID = currentUser!!.id))
+        val owned = newTask.copy(userID = currentUser!!.id)
+        client.from("task").insert(owned)
+        tasks = tasks + owned
         true
     } catch (e: Exception) {
         rethrowIfCancelled(e)
@@ -479,7 +487,9 @@ class Supabase(private val prefs: Prefs, val client: SupabaseClient) {
 
     // MARK: - Save Note
     suspend fun saveNote(newNote: Note): Boolean = try {
-        client.from("note").insert(newNote.copy(userID = currentUser!!.id))
+        val owned = newNote.copy(userID = currentUser!!.id)
+        client.from("note").insert(owned)
+        notes = notes + owned
         true
     } catch (e: Exception) {
         rethrowIfCancelled(e)

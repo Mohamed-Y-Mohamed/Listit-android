@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.ui.theme.IosFont
@@ -198,18 +200,31 @@ fun DescriptionEditor(text: String, onTextChange: (String) -> Unit, placeholder:
 }
 
 @Composable
-fun UnderlineTab(title: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
+fun UnderlineTab(
+    title: String,
+    selected: Boolean,
+    accent: Color,
+    spacing: Dp = 6.dp,
+    indicatorHeight: Dp = 2.dp,
+    /** Rounds the indicator, as the collection columns do (iOS `Capsule`). */
+    capsule: Boolean = false,
+    onClick: () -> Unit,
+) {
     val palette = LocalPalette.current
     Column(
         Modifier.width(IntrinsicSize.Max).clickable(interactionSource = null, indication = null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing),
     ) {
         Text(
             title, style = IosFont.subheadline,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) palette.primary else palette.secondary,
         )
-        Box(Modifier.height(2.dp).fillMaxWidth().background(if (selected) accent else Color.Transparent))
+        Box(
+            Modifier.height(indicatorHeight).fillMaxWidth()
+                .then(if (capsule) Modifier.clip(CircleShape) else Modifier)
+                .background(if (selected) accent else Color.Transparent),
+        )
     }
 }

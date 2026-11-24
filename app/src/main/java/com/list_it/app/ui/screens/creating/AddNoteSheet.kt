@@ -47,12 +47,13 @@ import java.util.UUID
 
 /** iOS `AddNoteView`. */
 @Composable
-fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
+fun ColumnScope.AddNoteSheet(list: TodoList, initialCollectionID: String? = null, dismiss: () -> Unit) {
     val db = LocalDb.current
     val scope = rememberCoroutineScope()
     var noteTitle by remember { mutableStateOf("") }
     var noteDescription by remember { mutableStateOf("") }
-    var selectedCollectionID by remember { mutableStateOf<String?>(null) }
+    // Pre-selected when opened from a collection's empty state, so the note lands where it was asked for.
+    var selectedCollectionID by remember { mutableStateOf(initialCollectionID) }
     var isPinned by remember { mutableStateOf(false) }
     var selectedColorHex by remember { mutableStateOf("") }
     var showAlert by remember { mutableStateOf(false) }
@@ -76,10 +77,7 @@ fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
             collectionID = target?.id.orEmpty(), userID = "", listID = list.id,
         )
         scope.launch {
-            if (db.saveNote(newNote)) {
-                db.notes = db.notes + newNote
-                dismiss()
-            } else showAlert = true
+            if (db.saveNote(newNote)) dismiss() else showAlert = true
         }
     }
 

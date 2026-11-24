@@ -9,16 +9,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
-/** Wavy edge used on list cards (iOS `WaveShape`). Values are in px. */
-fun wavePath(size: Size, depth: Float, curvature: Float): Path = Path().apply {
-    val x = minOf(depth, size.width)
-    moveTo(0f, 0f)
-    lineTo(x, 0f)
-    cubicTo(x + curvature, size.height * 0.30f, x - curvature, size.height * 0.70f, x, size.height)
-    lineTo(0f, size.height)
-    close()
-}
-
 /** Collection header highlight (iOS `DiagonalSliceShape`). */
 fun diagonalSlicePath(size: Size, skewOffset: Float): Path = Path().apply {
     moveTo(0f, 0f)

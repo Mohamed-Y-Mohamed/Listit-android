@@ -52,6 +52,8 @@ import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TableRows
 import androidx.compose.material.icons.outlined.VerifiedUser
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -89,6 +91,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.data.PasswordRules
+import com.list_it.app.model.CollectionLayout
 import com.list_it.app.model.ListDisplayStyle
 import com.list_it.app.model.SurfaceChoice
 import com.list_it.app.ui.LocalDb
@@ -455,30 +458,53 @@ private fun AppearanceSection() {
     }
 
     // List layout (Android only in the web app).
+    OptionGroup(
+        "List layout",
+        listOf(
+            RadioOption(ListDisplayStyle.CARD, "Cards", "A two-column grid", Icons.Outlined.GridView),
+            RadioOption(ListDisplayStyle.LIST, "List", "One full-width row each", Icons.Outlined.TableRows),
+        ),
+        selected = prefs.displayStyle,
+    ) { prefs.displayStyle = it }
+
+    // How a list's collections are laid out inside List Detail.
+    OptionGroup(
+        "Collection layout",
+        CollectionLayout.entries.map {
+            RadioOption(it, it.title, it.hint, if (it == CollectionLayout.COLUMNS) Icons.Outlined.ViewColumn else Icons.Outlined.ViewAgenda)
+        },
+        selected = prefs.collectionLayout,
+    ) { prefs.collectionLayout = it }
+}
+
+private data class RadioOption<T>(val value: T, val title: String, val hint: String, val icon: ImageVector)
+
+/** A titled group of single-choice rows, as the web app's radio lists. */
+@Composable
+private fun <T> OptionGroup(title: String, options: List<RadioOption<T>>, selected: T, onSelect: (T) -> Unit) {
+    val palette = LocalPalette.current
+    val isDark = palette.isDark
+    val divider = if (isDark) palette.ramp.border else Color(0xFFE5E7EB)
     Column {
-        Text("List layout", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong(), modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong(), modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         val shape = RoundedCornerShape(8.dp)
-        Column(Modifier.fillMaxWidth().clip(shape).background(palette.ramp.raised).border(1.dp, if (isDark) palette.ramp.border else Color(0xFFE5E7EB), shape)) {
-            listOf(
-                Triple(ListDisplayStyle.CARD, "Cards", "A two-column grid") to Icons.Outlined.GridView,
-                Triple(ListDisplayStyle.LIST, "List", "One full-width row each") to Icons.Outlined.TableRows,
-            ).forEachIndexed { index, (option, icon) ->
-                val (style, title, hint) = option
-                val selected = prefs.displayStyle == style
-                if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(if (isDark) palette.ramp.border else Color(0xFFE5E7EB)))
+        Column(Modifier.fillMaxWidth().clip(shape).background(palette.ramp.raised).border(1.dp, divider, shape)) {
+            options.forEachIndexed { index, option ->
+                val isSelected = option.value == selected
+                if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 44.dp)
-                        .semantics { role = Role.RadioButton; stateDescription = if (selected) "Selected" else "Not selected" }
-                        .clickable { prefs.displayStyle = style }.padding(16.dp),
+                        .semantics { role = Role.RadioButton; stateDescription = if (isSelected) "Selected" else "Not selected" }
+                        .clickable { onSelect(option.value) }.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(icon, null, tint = if (selected) palette.accent else muted(), modifier = Modifier.size(20.dp))
+                    Icon(option.icon, null, tint = if (isSelected) palette.accent else muted(), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong())
-                        Text(hint, fontSize = 14.sp, color = muted())
+                        Text(option.title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong())
+                        Text(option.hint, fontSize = 14.sp, color = muted())
                     }
-                    if (selected) Icon(Icons.Filled.CheckCircle, null, tint = palette.accent, modifier = Modifier.size(16.dp))
+                    if (isSelected) Icon(Icons.Filled.CheckCircle, null, tint = palette.accent, modifier = Modifier.size(16.dp))
                 }
             }
         }

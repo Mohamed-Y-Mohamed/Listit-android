@@ -174,7 +174,6 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             statusMessage = error?.let { "Error: $it" } ?: "Task reminder scheduled for ${Dates.abbreviatedDateTime(finalReminder)}"
         } else if (hadPendingReminder) {
             Reminders.cancel(task.id)
-            ReminderStore.remove(task.id)
         }
         hadPendingReminder = finalReminder != null
         originalReminder = finalReminder
@@ -218,7 +217,6 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     fun performDelete() = scope.launch {
         if (db.deleteTask(task)) {
             Reminders.cancel(task.id)
-            ReminderStore.remove(task.id)
             dismiss()
         } else {
             alertMode = AlertMode.ERROR; showAlert = true

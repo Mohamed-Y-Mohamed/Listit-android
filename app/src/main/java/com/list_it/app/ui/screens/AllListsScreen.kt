@@ -88,10 +88,11 @@ import com.list_it.app.ui.components.SearchField
 import com.list_it.app.ui.components.SwipeAction
 import com.list_it.app.ui.components.SwipeRevealRow
 import com.list_it.app.ui.components.GridListCard
+import com.list_it.app.ui.components.ListCardMetrics
 import com.list_it.app.ui.components.PinnedListCard
 import com.list_it.app.ui.components.RowListCard
 import com.list_it.app.ui.components.TintedButton
-import com.list_it.app.ui.components.wavePath
+import com.list_it.app.ui.components.rememberListMetrics
 import com.list_it.app.ui.screens.creating.AddListSheet
 import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
@@ -120,6 +121,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
     var currentSort by remember { mutableStateOf(SortOption.OLDEST) }
 
     val filteredLists = db.getFilteredLists(searchText, currentSort)
+    val metrics = rememberListMetrics()
 
     RequestNotificationPermission()
 
@@ -155,7 +157,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
             SearchField(searchText, { searchText = it }, "Search List")
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 HeaderView()
-                PinnedListView(searchText, onOpenList, actions)
+                PinnedListView(searchText, metrics, onOpenList, actions)
                 ListInfoSection(currentSort, { currentSort = it }, onWhatsNew = { showWhatsNewView = true })
             }
             Box(
@@ -177,7 +179,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
                 ) {
                     items(filteredLists, key = { "${it.id}-${it.listName}-${it.bgColorHex}" }) { list ->
                         ContextMenuBox(onClick = { onOpenList(list) }, menu = { close -> ListContextMenu(list, actions, close) }) {
-                            GridListCard(list)
+                            GridListCard(list, metrics[list.id] ?: ListCardMetrics())
                         }
                     }
                 }
@@ -190,7 +192,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
                             onClick = { onOpenList(list) },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             shape = RowCardShape,
-                        ) { RowListCard(list) }
+                        ) { RowListCard(list, metrics[list.id] ?: ListCardMetrics()) }
                     }
                 }
             }
@@ -302,7 +304,12 @@ private fun ListInfoSection(currentSort: SortOption, onSort: (SortOption) -> Uni
 // MARK: - Pinned lists
 
 @Composable
-private fun PinnedListView(searchText: String, onOpenList: (TodoList) -> Unit, actions: ListActions) {
+private fun PinnedListView(
+    searchText: String,
+    metrics: Map<String, ListCardMetrics>,
+    onOpenList: (TodoList) -> Unit,
+    actions: ListActions,
+) {
     val db = LocalDb.current
     val pinned = db.pinnedLists(searchText)
     if (pinned.isEmpty()) return
@@ -319,7 +326,7 @@ private fun PinnedListView(searchText: String, onOpenList: (TodoList) -> Unit, a
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 pinned.forEach { list ->
                     ContextMenuBox(onClick = { onOpenList(list) }, menu = { close -> ListContextMenu(list, actions, close) }) {
-                        PinnedListCard(list, cardWidth)
+                        PinnedListCard(list, metrics[list.id] ?: ListCardMetrics(), cardWidth)
                     }
                 }
             }

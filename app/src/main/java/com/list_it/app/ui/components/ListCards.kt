@@ -2,12 +2,9 @@
 package com.list_it.app.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,14 +33,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.list_it.app.model.TodoList
 import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.theme.LocalPalette
@@ -51,38 +46,63 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
 
-private data class CardMetrics(val open: Int, val done: Int, val notes: Int) {
+/**
+ * What one list holds. The card shows the contents on one line and the task progress on the
+ * next, directly above the bar, so no figure is stated twice.
+ */
+data class ListCardMetrics(
+    val collections: Int = 0,
+    val open: Int = 0,
+    val done: Int = 0,
+    val notes: Int = 0,
+) {
     val total: Int get() = open + done
     val fraction: Float get() = if (total == 0) 0f else done.toFloat() / total
 
-    fun summary(): String = when {
-        total == 0 && notes == 0 -> "No tasks or notes yet"
-        total == 0 -> "No tasks · ${noteLabel()}"
-        open == 0 -> "All tasks done · ${noteLabel()}"
-        else -> "${openLabel()} · ${noteLabel()}"
+    /** "3 collections · 2 notes": what is inside the list, never repeating the task figures. */
+    fun contents(): String = "${plural(collections, "collection")} · ${plural(notes, "note")}"
+
+    /** "1 of 3 tasks done": the caption that sits on top of the progress bar. */
+    fun progress(): String = when {
+        total == 0 -> "No tasks yet"
+        done == total -> if (total == 1) "1 task done" else "All $total tasks done"
+        total == 1 -> "$done of 1 task done"
+        else -> "$done of $total tasks done"
     }
 
-    fun openLabel(): String = when (open) {
-        0 -> if (total == 0) "No tasks" else "All tasks done"
-        1 -> "1 task left"
-        else -> "$open tasks left"
-    }
-
-    private fun noteLabel(): String = if (notes == 1) "1 note" else "$notes notes"
+    private fun plural(count: Int, noun: String) = if (count == 1) "1 $noun" else "$count ${noun}s"
 }
 
+/**
+ * Metrics for every list, grouped once per change to the underlying data. Counting inside each
+ * card walked every task and note per card, so a screen of lists cost cards x rows on every
+ * recomposition, including each search keystroke.
+ */
 @Composable
-private fun readMetrics(list: TodoList): CardMetrics {
+fun rememberListMetrics(): Map<String, ListCardMetrics> {
     val db = LocalDb.current
-    var open = 0
-    var done = 0
-    for (task in db.tasks) {
-        if (task.listID == list.id && !task.isDeleted) {
-            if (task.isCompleted) done++ else open++
+    val tasks = db.tasks
+    val notes = db.notes
+    val collections = db.collections
+    return remember(tasks, notes, collections) {
+        val open = HashMap<String, Int>()
+        val done = HashMap<String, Int>()
+        for (task in tasks) {
+            if (task.isDeleted) continue
+            val bucket = if (task.isCompleted) done else open
+            bucket[task.listID] = (bucket[task.listID] ?: 0) + 1
+        }
+        val noteCounts = notes.asSequence().filter { !it.isDeleted }.groupingBy { it.listID }.eachCount()
+        val collectionCounts = collections.groupingBy { it.listID }.eachCount()
+        (open.keys + done.keys + noteCounts.keys + collectionCounts.keys).associateWith { id ->
+            ListCardMetrics(
+                collections = collectionCounts[id] ?: 0,
+                open = open[id] ?: 0,
+                done = done[id] ?: 0,
+                notes = noteCounts[id] ?: 0,
+            )
         }
     }
-    val notes = db.notes.count { it.listID == list.id && !it.isDeleted }
-    return CardMetrics(open, done, notes)
 }
 
 private data class Ink(val strong: Color, val quiet: Color)
@@ -145,12 +165,9 @@ private val FolioShape = RoundedCornerShape(
 private fun Modifier.folioSurface(colors: FolioColors): Modifier =
     clip(FolioShape).background(colors.paper).border(1.dp, colors.outline, FolioShape)
 
-
-
 @Composable
-fun GridListCard(list: TodoList, modifier: Modifier = Modifier) {
+fun GridListCard(list: TodoList, metrics: ListCardMetrics, modifier: Modifier = Modifier) {
     val colors = folioColors(list)
-    val metrics = readMetrics(list)
 
     Column(modifier.fillMaxWidth().folioSurface(colors)) {
         Row(
@@ -187,25 +204,21 @@ fun GridListCard(list: TodoList, modifier: Modifier = Modifier) {
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Detail(metrics.summary(), colors.ledgerInk.quiet)
-
-            if (metrics.total > 0) {
-                Text(
-                    text = "${metrics.done} of ${metrics.total} done",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.ledgerInk.strong,
-                )
-                LedgerProgress(metrics.fraction, colors)
-            }
+            Detail(metrics.contents(), colors.ledgerInk.quiet)
+            Text(
+                text = metrics.progress(),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.ledgerInk.strong,
+            )
+            LedgerProgress(metrics.fraction, colors)
         }
     }
 }
 
-/** List row: an index tab, the title and status, and a directional affordance. */
+/** List row: the title and status, and a directional affordance. */
 @Composable
-fun RowListCard(list: TodoList, modifier: Modifier = Modifier) {
+fun RowListCard(list: TodoList, metrics: ListCardMetrics, modifier: Modifier = Modifier) {
     val colors = folioColors(list)
-    val metrics = readMetrics(list)
 
     Column(
         modifier = modifier
@@ -248,44 +261,33 @@ fun RowListCard(list: TodoList, modifier: Modifier = Modifier) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (metrics.total > 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Detail(metrics.summary(), colors.ledgerInk.quiet)
-                    }
-
-                    Text(
-                        text = "${metrics.done} of ${metrics.total} done",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.ledgerInk.strong,
-                    )
-                }
-
-                LedgerProgress(metrics.fraction, colors)
-            } else {
-                Detail(metrics.summary(), colors.ledgerInk.quiet)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Detail(metrics.contents(), colors.ledgerInk.quiet, Modifier.weight(1f))
+                Text(
+                    text = metrics.progress(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.ledgerInk.strong,
+                )
             }
+            LedgerProgress(metrics.fraction, colors)
         }
     }
 }
-/** Pinned rail tile: a folded corner and a concise status; width is set by the caller. */
+
+/** Pinned rail tile: a concise status; width is set by the caller. */
 @Composable
 fun PinnedListCard(
     list: TodoList,
+    metrics: ListCardMetrics,
     width: Dp,
     modifier: Modifier = Modifier,
 ) {
     val colors = folioColors(list)
-    val metrics = readMetrics(list)
-    val status = when {
-        list.isDefault -> "Default list"
-        metrics.total == 0 -> "No tasks"
-        else -> "${metrics.done} of ${metrics.total} done"
-    }
+    val status = if (list.isDefault) "Default list" else metrics.progress()
 
     Column(
         modifier = modifier
@@ -322,6 +324,7 @@ fun PinnedListCard(
         }
     }
 }
+
 @Composable
 private fun FolioTitle(
     list: TodoList,
@@ -341,40 +344,8 @@ private fun FolioTitle(
 }
 
 @Composable
-private fun Detail(text: String, color: Color) {
-    Text(text = text, style = MaterialTheme.typography.bodySmall, color = color)
-}
-
-@Composable
-private fun FolioTab(colors: FolioColors, pinned: Boolean) {
-    val label = if (pinned) Modifier.semantics { contentDescription = "Pinned" } else Modifier
-    Canvas(
-        Modifier.size(width = 34.dp, height = 32.dp)
-            .clip(RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp, bottomEnd = 9.dp, bottomStart = 3.dp))
-            .background(colors.tab)
-            .then(label),
-    ) {
-        val w = size.width
-        val h = size.height
-        val stroke = 1.5.dp.toPx()
-        if (pinned) {
-            val bookmark = Path().apply {
-                moveTo(w * 0.36f, h * 0.27f)
-                lineTo(w * 0.64f, h * 0.27f)
-                lineTo(w * 0.64f, h * 0.74f)
-                lineTo(w * 0.50f, h * 0.63f)
-                lineTo(w * 0.36f, h * 0.74f)
-                close()
-            }
-            drawPath(bookmark, colors.tabInk, style = Stroke(width = stroke, join = StrokeJoin.Round))
-        } else {
-            for (index in 0..2) {
-                val y = h * (0.34f + index * 0.16f)
-                val end = if (index == 2) 0.58f else 0.70f
-                drawLine(colors.tabInk, Offset(w * 0.30f, y), Offset(w * end, y), stroke, StrokeCap.Round)
-            }
-        }
-    }
+private fun Detail(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(text = text, modifier = modifier, style = MaterialTheme.typography.bodySmall, color = color)
 }
 
 private fun DrawScope.drawLedgerRule(color: Color) {
@@ -388,22 +359,7 @@ private fun DrawScope.drawLedgerRule(color: Color) {
     }
 }
 
-private fun DrawScope.drawFold(color: Color, outline: Color) {
-    val edge = 24.dp.toPx().coerceAtMost(size.width)
-    val drop = 14.dp.toPx().coerceAtMost(size.height)
-    val end = if (layoutDirection == LayoutDirection.Ltr) size.width else 0f
-    val inner = if (layoutDirection == LayoutDirection.Ltr) end - edge else edge
-    val fold = Path().apply {
-        moveTo(inner, 0f)
-        lineTo(end, 0f)
-        lineTo(end, drop)
-        close()
-    }
-    drawPath(fold, color)
-    drawLine(outline, Offset(inner, 0f), Offset(end, drop), 1.dp.toPx())
-}
-
-/** Eight visual divisions, not eight tasks; the text above gives the exact count. */
+/** Eight visual divisions, not eight tasks; the caption above gives the exact count. */
 @Composable
 private fun LedgerProgress(progress: Float, colors: FolioColors) {
     Canvas(Modifier.fillMaxWidth().height(5.dp)) {
@@ -450,24 +406,4 @@ private fun Chevron(color: Color) {
             style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
-}
-
-/** Retained for existing callers. The Folio cards use static, wrapping titles. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ScrollingText(text: String, fontSize: Int, color: Color) {
-    Text(
-        text = text,
-        modifier = Modifier.fillMaxWidth().basicMarquee(
-            iterations = Int.MAX_VALUE,
-            initialDelayMillis = 3_000,
-            repeatDelayMillis = 1_500,
-            velocity = 40.dp,
-        ),
-        fontSize = fontSize.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = color,
-        maxLines = 1,
-        softWrap = false,
-    )
 }

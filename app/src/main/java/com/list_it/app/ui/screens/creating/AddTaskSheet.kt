@@ -59,13 +59,14 @@ import java.util.UUID
 
 /** iOS `AddTaskView`. */
 @Composable
-fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
+fun ColumnScope.AddTaskSheet(list: TodoList, initialCollectionID: String? = null, dismiss: () -> Unit) {
     val db = LocalDb.current
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
     var taskTitle by remember { mutableStateOf("") }
     var taskDescription by remember { mutableStateOf("") }
-    var selectedCollectionID by remember { mutableStateOf<String?>(null) }
+    // Pre-selected when opened from a collection's empty state, so the task lands where it was asked for.
+    var selectedCollectionID by remember { mutableStateOf(initialCollectionID) }
     var isPinned by remember { mutableStateOf(false) }
     var dueDate by remember { mutableStateOf(Instant.now()) }
     var addDueDate by remember { mutableStateOf(false) }
@@ -108,7 +109,6 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
         )
         scope.launch {
             if (db.saveTask(newTask)) {
-                db.tasks = db.tasks + newTask
                 if (addReminder) Reminders.schedule(newTask.id, newTask.text, reminderDate)
                 dismiss()
             } else showAlert = true

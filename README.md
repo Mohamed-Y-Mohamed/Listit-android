@@ -5,7 +5,7 @@ Progress and task/note views taken from the web app's Capacitor (Android) design
 backend as the iOS and web apps.
 
 - Package / application id: `com.list_it.app`
-- Min SDK 26 (Android 8), target SDK 36, compile SDK 37
+- Min SDK 24 (Android 7.0), target SDK 36, compile SDK 37 (see Minimum SDK below)
 - Kotlin 2.4, Android Gradle Plugin 9.5, Gradle 9.8, Jetpack Compose (Material 3)
 
 ## Run
