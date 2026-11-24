@@ -61,8 +61,8 @@ private data class Bucket(val label: String, val completed: Int, val inProgress:
 fun ProgressScreen() {
     val db = LocalDb.current
     val palette = LocalPalette.current
-    val strong = if (palette.isDark) Color.White else WebColor.gray900
-    val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
+    val strong = palette.primary
+    val muted = palette.secondary
     val track = if (palette.isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.10f)
     var range by remember { mutableStateOf(Range.WEEK) }
     val locale = LocalConfiguration.current.locales[0]

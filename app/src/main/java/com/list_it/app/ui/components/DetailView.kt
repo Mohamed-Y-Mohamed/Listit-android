@@ -28,7 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.ui.theme.LocalPalette
-import com.list_it.app.ui.theme.WebColor
 
 // Read-only "view" parts of the task and note sheets, from the web app's
 // TasksDetails / notedetail view mode.
@@ -45,20 +44,20 @@ object ViewColor {
 fun SectionLabel(text: String) {
     Text(
         text.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp,
-        color = if (LocalPalette.current.isDark) WebColor.gray500 else WebColor.gray400,
+        color = LocalPalette.current.secondary,
     )
 }
 
 /** "Collection  General" style row (web `InfoRow`). */
 @Composable
 fun InfoRow(label: String, value: String?) {
-    val isDark = LocalPalette.current.isDark
+    val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, fontSize = 13.sp, color = if (isDark) WebColor.gray500 else WebColor.gray400)
+        Text(label, fontSize = 13.sp, color = palette.secondary)
         Spacer(Modifier.width(16.dp))
         Text(
             value ?: "None", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End,
-            color = if (value != null) (if (isDark) Color(0xFFE5E7EB) else Color(0xFF374151)) else (if (isDark) Color(0xFF4B5563) else WebColor.gray400),
+            color = if (value != null) palette.primary else palette.tertiary,
             modifier = Modifier.weight(1f),
         )
     }

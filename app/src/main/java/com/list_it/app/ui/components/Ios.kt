@@ -110,7 +110,7 @@ fun BarButton(text: String, bold: Boolean = false, enabled: Boolean = true, colo
             text,
             style = IosFont.body,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            color = if (enabled) color else LocalPalette.current.tertiary,
+            color = if (enabled) color else LocalPalette.current.disabled,
         )
     }
 }
@@ -275,11 +275,11 @@ fun MenuItem(
     val palette = LocalPalette.current
     val color = if (destructive) IosColor.red else palette.primary
     DropdownMenuItem(
-        text = { Text(text, style = IosFont.body, color = if (enabled) color else palette.tertiary, maxLines = 1) },
+        text = { Text(text, style = IosFont.body, color = if (enabled) color else palette.disabled, maxLines = 1) },
         onClick = onClick,
         enabled = enabled,
         leadingIcon = if (checked) ({ Icon(Icons.Filled.Check, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }) else null,
-        trailingIcon = icon?.let { { Icon(it, null, tint = if (enabled) color else palette.tertiary, modifier = Modifier.size(20.dp)) } },
+        trailingIcon = icon?.let { { Icon(it, null, tint = if (enabled) color else palette.disabled, modifier = Modifier.size(20.dp)) } },
         contentPadding = PaddingValues(horizontal = 14.dp),
     )
 }
@@ -299,10 +299,10 @@ fun SubMenuItem(
     var open by remember { mutableStateOf(false) }
     val turn by animateFloatAsState(if (open) 90f else 0f, label = "submenu chevron")
     DropdownMenuItem(
-        text = { Text(text, style = IosFont.body, color = if (enabled) palette.primary else palette.tertiary, maxLines = 1) },
+        text = { Text(text, style = IosFont.body, color = if (enabled) palette.primary else palette.disabled, maxLines = 1) },
         onClick = { open = !open },
         enabled = enabled,
-        leadingIcon = icon?.let { { Icon(it, null, tint = if (enabled) palette.primary else palette.tertiary, modifier = Modifier.size(20.dp)) } },
+        leadingIcon = icon?.let { { Icon(it, null, tint = if (enabled) palette.primary else palette.disabled, modifier = Modifier.size(20.dp)) } },
         trailingIcon = {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = palette.secondary,

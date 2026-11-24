@@ -62,13 +62,21 @@ val SURFACE_RAMPS: Map<Boolean, Map<SurfaceChoice, SurfaceRamp>> = mapOf(
     ),
 )
 
-/** Theme colours: iOS text colours plus the surfaces of the chosen background. */
+/**
+ * Theme colours: text colours plus the surfaces of the chosen background.
+ *
+ * Text runs black on light and white on dark, and the supporting shades stay close to it rather
+ * than fading towards the background: iOS's translucent label colours landed around #8E8E93 on
+ * white, which is hard work at 13sp. [disabled] is the one colour that stays faint, because a
+ * control that cannot be used has to look that way.
+ */
 @Immutable
 data class Palette(
     val isDark: Boolean,
     val primary: Color,
     val secondary: Color,
     val tertiary: Color,
+    val disabled: Color,
     val separator: Color,
     val fill: Color,
     val material: Color,
@@ -87,10 +95,12 @@ data class Palette(
 }
 
 private fun palette(dark: Boolean, ramp: SurfaceRamp) = if (dark) Palette(
-    isDark = true, primary = Color.White, secondary = Color(0x99EBEBF5), tertiary = Color(0x4DEBEBF5),
+    isDark = true, primary = Color.White, secondary = Color(0xFFF2F2F7), tertiary = Color(0xFFD1D1D6),
+    disabled = Color(0x4DEBEBF5),
     separator = Color(0x99545458), fill = Color(0x5C787880), material = ramp.card.copy(alpha = 0.85f), ramp = ramp,
 ) else Palette(
-    isDark = false, primary = Color.Black, secondary = Color(0x993C3C43), tertiary = Color(0x4D3C3C43),
+    isDark = false, primary = Color.Black, secondary = Color(0xFF1C1C1E), tertiary = Color(0xFF3A3A3C),
+    disabled = Color(0x4D3C3C43),
     separator = Color(0x4A3C3C43), fill = Color(0x33787880), material = ramp.card.copy(alpha = 0.85f), ramp = ramp,
 )
 

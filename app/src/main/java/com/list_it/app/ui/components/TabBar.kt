@@ -75,8 +75,8 @@ fun TabBar(currentRoute: String, onSelect: (String) -> Unit) {
                     val isSelected = index == selectedIndex
                     val color = when {
                         isSelected -> WebColor.blue500
-                        palette.isDark -> WebColor.gray500
-                        else -> WebColor.gray400
+                        palette.isDark -> palette.secondary
+                        else -> palette.secondary
                     }
                     Column(
                         Modifier.weight(1f).fillMaxHeight()

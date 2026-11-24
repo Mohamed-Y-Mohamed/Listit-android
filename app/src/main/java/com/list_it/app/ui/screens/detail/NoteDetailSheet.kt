@@ -14,7 +14,6 @@ import com.list_it.app.ui.components.InfoRow
 import com.list_it.app.ui.components.SectionLabel
 import com.list_it.app.ui.components.ViewColor
 import com.list_it.app.ui.components.ViewFooterButton
-import com.list_it.app.ui.theme.WebColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -184,7 +183,7 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
 private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -> Unit, onTogglePin: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     val db = LocalDb.current
     val palette = LocalPalette.current
-    val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
+    val muted = palette.secondary
     val color = colorFromHex(note.bgColorHex)
     Column(Modifier.fillMaxSize().background(color.copy(alpha = 0.08f))) {
         IosTopBar(

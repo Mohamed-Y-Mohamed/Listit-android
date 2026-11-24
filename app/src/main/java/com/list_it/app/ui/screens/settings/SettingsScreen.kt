@@ -182,9 +182,11 @@ fun SettingsScreen() {
 
 // ---------- Building blocks ----------
 
-@Composable private fun strong() = if (LocalPalette.current.isDark) Color.White else WebColor.gray900
-@Composable private fun muted() = if (LocalPalette.current.isDark) WebColor.gray400 else WebColor.gray500
-@Composable private fun label() = if (LocalPalette.current.isDark) WebColor.gray300 else Color(0xFF374151)
+// Settings used the web app's grey ramp, which sat well short of the page's text colour.
+// These now follow the theme, so every label reads at the same weight as the rest of the app.
+@Composable private fun strong() = LocalPalette.current.primary
+@Composable private fun muted() = LocalPalette.current.secondary
+@Composable private fun label() = LocalPalette.current.secondary
 
 @Composable
 private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
@@ -201,9 +203,9 @@ private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit,
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(section.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = strong(), maxLines = 1)
-                Text(section.description, fontSize = 12.sp, color = WebColor.gray500, maxLines = 1)
+                Text(section.description, fontSize = 12.sp, color = muted(), maxLines = 1)
             }
-            Icon(Icons.Outlined.KeyboardArrowDown, null, tint = if (palette.isDark) WebColor.gray500 else WebColor.gray400, modifier = Modifier.size(18.dp).rotate(chevron))
+            Icon(Icons.Outlined.KeyboardArrowDown, null, tint = muted(), modifier = Modifier.size(18.dp).rotate(chevron))
         }
         AnimatedVisibility(isOpen, enter = expandVertically(tween(200)) + fadeIn(tween(200)), exit = shrinkVertically(tween(200)) + fadeOut(tween(200))) {
             Column {
@@ -218,7 +220,7 @@ private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit,
 private fun SectionHeading(title: String, subtitle: String) {
     Column {
         Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = strong())
-        Text(subtitle, fontSize = 14.sp, color = if (LocalPalette.current.isDark) WebColor.gray400 else Color(0xFF4B5563), modifier = Modifier.padding(top = 4.dp))
+        Text(subtitle, fontSize = 14.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -239,9 +241,9 @@ private fun LinkRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = titleColor)
-            Text(subtitle, fontSize = 12.sp, color = WebColor.gray500)
+            Text(subtitle, fontSize = 12.sp, color = muted())
         }
-        if (external) Icon(Icons.AutoMirrored.Outlined.OpenInNew, null, tint = if (palette.isDark) WebColor.gray500 else WebColor.gray400, modifier = Modifier.size(16.dp))
+        if (external) Icon(Icons.AutoMirrored.Outlined.OpenInNew, null, tint = muted(), modifier = Modifier.size(16.dp))
     }
 }
 
@@ -277,7 +279,7 @@ private fun InputField(
     var reveal by remember { mutableStateOf(false) }
     Row(Modifier.fieldBox(focused, error), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text(placeholder, fontSize = 16.sp, color = WebColor.gray400)
+            if (value.isEmpty()) Text(placeholder, fontSize = 16.sp, color = palette.tertiary)
             BasicTextField(
                 value, onChange, enabled = enabled, singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = strong()),
@@ -290,7 +292,7 @@ private fun InputField(
         if (password) {
             Icon(
                 if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, if (reveal) "Hide password" else "Show password",
-                tint = WebColor.gray400, modifier = Modifier.padding(start = 8.dp).size(20.dp).clickable { reveal = !reveal },
+                tint = muted(), modifier = Modifier.padding(start = 8.dp).size(20.dp).clickable { reveal = !reveal },
             )
         }
     }
@@ -385,11 +387,11 @@ private fun ProfileSection(show: (Boolean, String) -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                "Read-only", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = if (palette.isDark) WebColor.gray300 else Color(0xFF4B5563),
+                "Read-only", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = muted(),
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (palette.isDark) palette.ramp.raised else Color(0xFFF3F4F6)).padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
-        Text("Email address cannot be changed", fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(top = 4.dp))
+        Text("Email address cannot be changed", fontSize = 12.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
     Column {
         FieldLabel("Full Name")
@@ -453,7 +455,7 @@ private fun AppearanceSection() {
         }
         Text(
             if (isDark) "Applies to dark mode. Light mode keeps its own choice." else "Applies to light mode. Dark mode keeps its own choice.",
-            fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+            fontSize = 12.sp, color = muted(), modifier = Modifier.padding(start = 4.dp, top = 8.dp),
         )
     }
 
@@ -549,7 +551,7 @@ private fun SecuritySection(show: (Boolean, String) -> Unit) {
     Column {
         FieldLabel("New Password")
         InputField(new, { new = it }, "Enter new password", "New Password", password = true, enabled = !saving)
-        Text(PasswordRules.RULE, fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(top = 4.dp))
+        Text(PasswordRules.RULE, fontSize = 12.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
     Column {
         FieldLabel("Confirm New Password")

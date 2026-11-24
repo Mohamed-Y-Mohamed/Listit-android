@@ -12,7 +12,6 @@ import com.list_it.app.ui.components.InfoRow
 import com.list_it.app.ui.components.SectionLabel
 import com.list_it.app.ui.components.ViewColor
 import com.list_it.app.ui.components.ViewFooterButton
-import com.list_it.app.ui.theme.WebColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -344,7 +343,7 @@ private fun ColumnScope.TaskView(
 ) {
     val db = LocalDb.current
     val palette = LocalPalette.current
-    val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
+    val muted = palette.secondary
     val due = task.dueDate
     val overdue = due != null && !task.isCompleted && Dates.endOfDay(due.day()) < Instant.now()
     Column(Modifier.fillMaxSize().background(accent.copy(alpha = 0.08f))) {
