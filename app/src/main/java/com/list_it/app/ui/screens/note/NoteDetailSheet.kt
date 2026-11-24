@@ -14,7 +14,6 @@ import com.list_it.app.ui.components.InfoRow
 import com.list_it.app.ui.components.SectionLabel
 import com.list_it.app.ui.components.ViewColor
 import com.list_it.app.ui.components.ViewFooterButton
-import com.list_it.app.ui.theme.WebColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
@@ -50,8 +50,10 @@ import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.components.AIMenuView
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.ColorInputView
 import com.list_it.app.ui.components.DescriptionEditor
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -71,7 +73,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     val db = LocalDb.current
-    val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
     val share = rememberShareAction()
 
@@ -86,9 +87,17 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
     var isEditing by remember { mutableStateOf(false) }
     val live = db.notes.firstOrNull { it.id == note.id } ?: note
 
-    val collection = db.collections.firstOrNull { it.id == note.collectionID }
-    val accent = collection?.let { colorFromHex(it.bgColorHex) } ?: IosColor.orange
     val shareText = "${note.title}\n\n${note.description.orEmpty()}"
+
+    // A drag or scrim dismiss confirms first while the form holds unsaved edits.
+    GuardSheetDismiss(
+        isEditing && (
+            editedTitle != live.title ||
+                editedDescription != live.description.orEmpty() ||
+                editedHex != live.bgColorHex ||
+                isPinned != live.isPinned
+            ),
+    )
 
     /** Checks the note has a title, then saves your edits. */
     fun saveChanges() {
@@ -181,12 +190,12 @@ fun ColumnScope.NoteDetailSheet(note: Note, dismiss: () -> Unit) {
 private fun ColumnScope.NoteView(note: Note, onDismiss: () -> Unit, onEdit: () -> Unit, onTogglePin: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     val db = LocalDb.current
     val palette = LocalPalette.current
-    val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
+    val muted = palette.secondary
     val color = colorFromHex(note.bgColorHex)
     Column(Modifier.fillMaxSize().background(color.copy(alpha = 0.08f))) {
         IosTopBar(
             "Note Details",
-            leading = { BarButton("Dismiss", onClick = onDismiss) },
+            leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
         // The title stays at the top; only the note's text scrolls when it's long.

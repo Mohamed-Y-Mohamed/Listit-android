@@ -179,33 +179,25 @@ fun AIGenerateButton(title: String = "Write with AI", action: () -> Unit) {
     }
 }
 
-/** How the orange AI pill looks, shared by "Write with AI" and the "AI Features" menu so they match. */
-@Composable
-private fun AIPill(text: String) {
-    Row(
-        Modifier.clip(CircleShape).background(IosColor.orange.copy(alpha = 0.15f)).heightIn(min = 28.dp).padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Filled.AutoAwesome, null, tint = IosColor.orange, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(text, style = IosFont.caption.copy(fontWeight = FontWeight.SemiBold), color = IosColor.orange, maxLines = 1)
-    }
-}
-
 /**
- * The orange "AI Features" pill in the corner of the description box on the Edit pages.
- * Tapping it opens a menu: rewrite as a list, refine, summarise, or your own prompt.
+ * The orange "Edit with AI" pill under the description box on the Edit pages, the same capsule as
+ * [AIGenerateButton] on the Add forms. Tapping it opens a menu from the pill: rewrite as a list,
+ * refine, summarise, or your own prompt. Only appears on phones that support on-device AI.
  */
 @Composable
 fun AIMenuView(editedDescription: String, onSelect: (AIFeatureMode) -> Unit) {
     if (!rememberAiAvailable()) return
     val enabled = editedDescription.isNotBlank()
-    IosMenu(
-        label = { AIPill("AI Features") },
-    ) { close ->
-        MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted, enabled = enabled) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
-        MenuItem("Refine Description", Icons.Filled.AutoAwesome, enabled = enabled) { close(); onSelect(AIFeatureMode.REFINE) }
-        MenuItem("Summarise Description", Icons.Filled.Summarize, enabled = enabled) { close(); onSelect(AIFeatureMode.SUMMARISE) }
-        MenuItem("Custom Prompt", Icons.Outlined.ChatBubbleOutline, enabled = enabled) { close(); onSelect(AIFeatureMode.CUSTOM) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        IosMenu(
+            label = { TintedButton("Edit with AI", Icons.Filled.AutoAwesome, IosColor.orange, capsule = true, small = true, enabled = enabled) },
+            shape = CircleShape,
+            enabled = enabled,
+        ) { close ->
+            MenuItem("Rewrite as List", Icons.AutoMirrored.Filled.FormatListBulleted) { close(); onSelect(AIFeatureMode.REWRITE_LIST) }
+            MenuItem("Refine Description", Icons.Filled.AutoAwesome) { close(); onSelect(AIFeatureMode.REFINE) }
+            MenuItem("Summarise Description", Icons.Filled.Summarize) { close(); onSelect(AIFeatureMode.SUMMARISE) }
+            MenuItem("Custom Prompt", Icons.Outlined.ChatBubbleOutline) { close(); onSelect(AIFeatureMode.CUSTOM) }
+        }
     }
 }

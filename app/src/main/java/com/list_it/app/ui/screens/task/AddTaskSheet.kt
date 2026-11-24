@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -39,8 +40,10 @@ import com.list_it.app.ui.components.SheetHeader
 import com.list_it.app.ui.screens.collection.CollectionPickerRow
 import com.list_it.app.ui.components.AIGenerateButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.DateTimeField
 import com.list_it.app.ui.components.DescriptionEditor
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -58,13 +61,14 @@ import java.util.UUID
 
 /** The form for adding a new task: title, description, due date, reminder and collection. */
 @Composable
-fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
+fun ColumnScope.AddTaskSheet(list: TodoList, initialCollectionID: String? = null, dismiss: () -> Unit) {
     val db = LocalDb.current
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
     var taskTitle by remember { mutableStateOf("") }
     var taskDescription by remember { mutableStateOf("") }
-    var selectedCollectionID by remember { mutableStateOf<String?>(null) }
+    // Pre-selected when opened from a collection's empty state, so the task lands where it was asked for.
+    var selectedCollectionID by remember { mutableStateOf(initialCollectionID) }
     var isPinned by remember { mutableStateOf(false) }
     var dueDate by remember { mutableStateOf(Instant.now()) }
     var addDueDate by remember { mutableStateOf(false) }
@@ -74,6 +78,9 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
     var showAIView by remember { mutableStateOf(false) }
 
     val endOfDueDay: Instant? = if (addDueDate) Dates.endOfDay(dueDate.day()) else null
+
+    // A drag or scrim dismiss confirms first once anything has been typed or toggled.
+    GuardSheetDismiss(taskTitle.isNotBlank() || taskDescription.isNotBlank() || isPinned || addDueDate || addReminder)
 
     // keepReminderWithinDueDay()
     LaunchedEffect(dueDate, addDueDate, addReminder) {
@@ -105,7 +112,6 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
         )
         scope.launch {
             if (db.saveTask(newTask)) {
-                db.tasks = db.tasks + newTask
                 if (addReminder) Reminders.schedule(newTask.id, newTask.text, reminderDate)
                 dismiss()
             } else showAlert = true
@@ -114,8 +120,8 @@ fun ColumnScope.AddTaskSheet(list: TodoList, dismiss: () -> Unit) {
 
     IosTopBar(
         "Add Task",
-        leading = { BarButton("Dismiss", onClick = dismiss) },
-        trailing = { BarButton("Create") { createTask() } },
+        leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = dismiss) },
+        trailing = { BarButton("Create", bold = true) { createTask() } },
     )
     Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         SheetHeader(Icons.Filled.EditNote, IosColor.orange, null)

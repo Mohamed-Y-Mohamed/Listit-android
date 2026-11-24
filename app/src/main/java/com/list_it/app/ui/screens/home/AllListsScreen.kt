@@ -87,11 +87,14 @@ import com.list_it.app.ui.components.MenuDivider
 import com.list_it.app.ui.components.MenuItem
 import com.list_it.app.ui.components.RequestNotificationPermission
 import com.list_it.app.ui.components.SearchField
+import com.list_it.app.ui.components.SwipeAction
+import com.list_it.app.ui.components.SwipeRevealRow
 import com.list_it.app.ui.components.GridListCard
+import com.list_it.app.ui.components.ListCardMetrics
 import com.list_it.app.ui.components.PinnedListCard
 import com.list_it.app.ui.components.RowListCard
 import com.list_it.app.ui.components.TintedButton
-import com.list_it.app.ui.components.wavePath
+import com.list_it.app.ui.components.rememberListMetrics
 import com.list_it.app.ui.screens.list.AddListSheet
 import com.list_it.app.ui.theme.IosColor
 import com.list_it.app.ui.theme.IosFont
@@ -120,6 +123,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
     var currentSort by remember { mutableStateOf(SortOption.OLDEST) }
 
     val filteredLists = db.getFilteredLists(searchText, currentSort)
+    val metrics = rememberListMetrics()
 
     RequestNotificationPermission()
 
@@ -156,7 +160,7 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
             SearchField(searchText, { searchText = it }, "Search List")
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 HeaderView()
-                PinnedListView(searchText, onOpenList, actions)
+                PinnedListView(searchText, metrics, onOpenList, actions)
                 ListInfoSection(currentSort, { currentSort = it }, onWhatsNew = { showWhatsNewView = true })
             }
             Box(
@@ -178,18 +182,20 @@ fun AllListsScreen(onOpenList: (TodoList) -> Unit, onQuickAction: (QuickAction) 
                 ) {
                     items(filteredLists, key = { "${it.id}-${it.listName}-${it.bgColorHex}" }) { list ->
                         ContextMenuBox(onClick = { onOpenList(list) }, menu = { close -> ListContextMenu(list, actions, close) }) {
-                            GridListCard(list)
+                            GridListCard(list, metrics[list.id] ?: ListCardMetrics())
                         }
                     }
                 }
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                     items(filteredLists, key = { "${it.id}-${it.listName}-${it.bgColorHex}" }) { list ->
-                        // Hold for pin, update and delete; the web build dropped the swipe actions.
-                        ContextMenuBox(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        // Rows swipe left for their actions; the grid above keeps the long press,
+                        // where a horizontal drag would fight the two-column layout.
+                        SwipeRevealRow(
+                            actions = listSwipeActions(list, actions),
                             onClick = { onOpenList(list) },
-                            menu = { close -> ListContextMenu(list, actions, close) },
-                        ) { RowListCard(list) }
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            shape = RowCardShape,
+                        ) { RowListCard(list, metrics[list.id] ?: ListCardMetrics()) }
                     }
                 }
             }
@@ -228,6 +234,24 @@ private fun QuickMenu(onCreate: () -> Unit, onQuickAction: (QuickAction) -> Unit
         MenuItem("Completed Tasks", Icons.Outlined.CheckCircle) { close(); onQuickAction(QuickAction.COMPLETED) }
         MenuItem("Not Completed Tasks", Icons.Outlined.Circle) { close(); onQuickAction(QuickAction.NOT_COMPLETED) }
         MenuItem("Overdue Tasks", Icons.Outlined.ErrorOutline) { close(); onQuickAction(QuickAction.OVERDUE) }
+    }
+}
+
+/** Matches the corners RowListCard draws, so the revealed strip is clipped to the card. */
+private val RowCardShape = RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
+
+/** The same three actions as [ListContextMenu]: a default list can only be pinned. */
+private fun listSwipeActions(list: TodoList, actions: ListActions): List<SwipeAction> = buildList {
+    add(
+        SwipeAction(
+            if (list.isPinned) "Unpin" else "Pin",
+            if (list.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+            IosColor.orange,
+        ) { actions.togglePin(list) },
+    )
+    if (!list.isDefault) {
+        add(SwipeAction("Edit", Icons.Filled.Edit, IosColor.blue) { actions.update(list) })
+        add(SwipeAction("Delete", Icons.Filled.Delete, IosColor.red) { actions.delete(list) })
     }
 }
 
@@ -288,7 +312,12 @@ private fun ListInfoSection(currentSort: SortOption, onSort: (SortOption) -> Uni
 
 /** The sideways-scrolling row of pinned lists. */
 @Composable
-private fun PinnedListView(searchText: String, onOpenList: (TodoList) -> Unit, actions: ListActions) {
+private fun PinnedListView(
+    searchText: String,
+    metrics: Map<String, ListCardMetrics>,
+    onOpenList: (TodoList) -> Unit,
+    actions: ListActions,
+) {
     val db = LocalDb.current
     val pinned = db.pinnedLists(searchText)
     if (pinned.isEmpty()) return
@@ -305,7 +334,7 @@ private fun PinnedListView(searchText: String, onOpenList: (TodoList) -> Unit, a
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 pinned.forEach { list ->
                     ContextMenuBox(onClick = { onOpenList(list) }, menu = { close -> ListContextMenu(list, actions, close) }) {
-                        PinnedListCard(list, cardWidth)
+                        PinnedListCard(list, metrics[list.id] ?: ListCardMetrics(), cardWidth)
                     }
                 }
             }

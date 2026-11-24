@@ -42,7 +42,7 @@ internal fun DefaultListScaffold(
         }
     }
     selectedTask?.let { task ->
-        IosSheet(onDismiss = onTaskDismiss, dismissible = false) { dismiss -> TaskDetailSheet(task, dismiss) }
+        IosSheet(onDismiss = onTaskDismiss) { dismiss -> TaskDetailSheet(task, dismiss) }
     }
 }
 

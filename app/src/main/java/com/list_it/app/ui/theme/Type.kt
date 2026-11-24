@@ -18,11 +18,16 @@ object IosFont {
     val caption2 = TextStyle(fontSize = 11.sp, lineHeight = 13.sp)
 }
 
+// Every slot the app actually reads is mapped. An unmapped slot silently falls back to the
+// Material default, which carries its own size and letter spacing and reads as a different app.
 val IosTypography = Typography(
     bodyLarge = IosFont.body,
     bodyMedium = IosFont.subheadline,
     bodySmall = IosFont.footnote,
     titleLarge = IosFont.title3.copy(fontWeight = FontWeight.SemiBold),
     titleMedium = IosFont.headline,
+    titleSmall = IosFont.subheadline.copy(fontWeight = FontWeight.SemiBold),
     labelLarge = IosFont.subheadline.copy(fontWeight = FontWeight.Medium),
+    labelMedium = IosFont.caption.copy(fontWeight = FontWeight.Medium),
+    labelSmall = IosFont.caption2.copy(fontWeight = FontWeight.Medium),
 )

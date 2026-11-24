@@ -10,7 +10,6 @@ import com.list_it.app.ui.components.DateChip
 import com.list_it.app.ui.components.SectionLabel
 import com.list_it.app.ui.components.ViewColor
 import com.list_it.app.ui.components.ViewFooterButton
-import com.list_it.app.ui.theme.WebColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.PushPin
@@ -59,8 +59,10 @@ import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.components.AIMenuView
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.DateTimeField
 import com.list_it.app.ui.components.DescriptionEditor
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -97,6 +99,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     var editedReminder by remember { mutableStateOf(Instant.now().plusSeconds(3600)) }
     var hasReminder by remember { mutableStateOf(false) }
     var hadPendingReminder by remember { mutableStateOf(false) }
+    var originalReminder by remember { mutableStateOf<Instant?>(null) }
     var lastReminderDate by remember { mutableStateOf<Instant?>(null) }
     var isPinned by remember { mutableStateOf(task.isPinned) }
     var showAlert by remember { mutableStateOf(false) }
@@ -122,10 +125,23 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             editedReminder = pending
             hasReminder = true
             hadPendingReminder = true
+            originalReminder = pending
             return@LaunchedEffect
         }
         ReminderStore.date(task.id)?.takeIf { it <= Instant.now() }?.let { lastReminderDate = it }
     }
+
+    // A drag or scrim dismiss confirms first while the form holds unsaved edits.
+    GuardSheetDismiss(
+        isEditing && (
+            editedText != live.text ||
+                editedDescription != live.description.orEmpty() ||
+                isPinned != live.isPinned ||
+                hasDueDate != (live.dueDate != null) ||
+                (hasDueDate && editedDueDate != live.dueDate) ||
+                (if (hasReminder) editedReminder != originalReminder else originalReminder != null)
+            ),
+    )
 
     // If the due date moves earlier, pull the reminder back so it still goes off before the task is due.
     LaunchedEffect(editedDueDate, hasDueDate, hasReminder) {
@@ -136,43 +152,49 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
         editedReminder = minOf(maxOf(sameTime, Instant.now()), limit)
     }
 
-    /** Checks the form, saves the task, then sets up (or cancels) its reminder. */
-    fun saveChanges() {
+    /** Validates and writes the form. Returns false when it could not be saved. */
+    suspend fun persistChanges(skipReminder: Boolean = false): Boolean {
         if (editedText.isBlank()) {
             db.setError("Error", "Your Task must have a title.")
             alertMode = AlertMode.ERROR; showAlert = true
-            return
+            return false
         }
-        if (hasReminder && editedReminder <= Instant.now()) {
+        if (!skipReminder && hasReminder && editedReminder <= Instant.now()) {
             db.setError("Reminder", "Please choose a reminder time in the future.")
             alertMode = AlertMode.ERROR; showAlert = true
-            return
+            return false
         }
         val finalDueDate = if (hasDueDate) editedDueDate else null
-        val finalReminder = if (hasReminder) editedReminder else null
-        scope.launch {
-            if (db.updateTask(task, editedText, editedDescription, finalDueDate, isPinned)) {
-                if (finalReminder != null) {
-                    val error = Reminders.schedule(task.id, editedText, finalReminder)
-                    statusMessage = error?.let { "Error: $it" } ?: "Task reminder scheduled for ${Dates.abbreviatedDateTime(finalReminder)}"
-                } else if (hadPendingReminder) {
-                    Reminders.cancel(task.id)
-                    ReminderStore.remove(task.id)
-                }
-                hadPendingReminder = finalReminder != null
-                isEditing = false
-            } else {
-                alertMode = AlertMode.ERROR; showAlert = true
-            }
+        val finalReminder = if (skipReminder) null else if (hasReminder) editedReminder else null
+        if (!db.updateTask(task, editedText, editedDescription, finalDueDate, isPinned)) {
+            alertMode = AlertMode.ERROR; showAlert = true
+            return false
         }
+        if (finalReminder != null) {
+            val error = Reminders.schedule(task.id, editedText, finalReminder)
+            statusMessage = error?.let { "Error: $it" } ?: "Task reminder scheduled for ${Dates.abbreviatedDateTime(finalReminder)}"
+        } else if (hadPendingReminder) {
+            Reminders.cancel(task.id)
+        }
+        hadPendingReminder = finalReminder != null
+        originalReminder = finalReminder
+        return true
     }
 
-    /** Marks the task done from the edit form and closes the page. */
-    fun completeTask() = scope.launch {
+    /** Checks the form, saves the task, then sets up (or cancels) its reminder. */
+    fun saveChanges() = scope.launch {
+        if (persistChanges()) isEditing = false
+    }
+
+    /** Complete from the edit form: keep the edits, then complete and close the page. Completing clears any reminder. */
+    fun saveAndComplete() = scope.launch {
+        if (!persistChanges(skipReminder = true)) return@launch
         if (db.completeTask(task)) {
             Reminders.cancel(task.id)
             dismiss()
-        } else showAlert = true
+        } else {
+            alertMode = AlertMode.ERROR; showAlert = true
+        }
     }
 
     /** Throws away unsaved edits and goes back to reading the task. */
@@ -200,7 +222,6 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
     fun performDelete() = scope.launch {
         if (db.deleteTask(task)) {
             Reminders.cancel(task.id)
-            ReminderStore.remove(task.id)
             dismiss()
         } else {
             alertMode = AlertMode.ERROR; showAlert = true
@@ -288,7 +309,7 @@ fun ColumnScope.TaskDetailSheet(task: ToDoTask, dismiss: () -> Unit) {
             onTogglePin = { isPinned = !isPinned },
             onAddToCalendar = { addToCalendar(editedText, editedDescription) },
             onDelete = { alertMode = AlertMode.DELETE; showAlert = true },
-            onComplete = { completeTask() },
+            onComplete = { saveAndComplete() },
         )
     }
 
@@ -324,13 +345,13 @@ private fun ColumnScope.TaskView(
     onDelete: () -> Unit,
 ) {
     val palette = LocalPalette.current
-    val muted = if (palette.isDark) WebColor.gray400 else WebColor.gray500
+    val muted = palette.secondary
     val due = task.dueDate
     val overdue = due != null && !task.isCompleted && Dates.endOfDay(due.day()) < Instant.now()
     Column(Modifier.fillMaxSize().background(accent.copy(alpha = 0.08f))) {
         IosTopBar(
             "Task Details",
-            leading = { BarButton("Dismiss", onClick = onDismiss) },
+            leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = onDismiss) },
             trailing = { BarButton("Edit", bold = true, onClick = onEdit) },
         )
         // The title stays at the top; only the description scrolls when it's long.
@@ -355,7 +376,7 @@ private fun ColumnScope.TaskView(
         }
         // Due date and reminder side by side, pinned above the buttons so you never have to scroll for them.
         // Their titles are black (white in dark mode) and the values next to them dark grey.
-        val valueGrey = if (palette.isDark) WebColor.gray400 else WebColor.gray600
+        val valueGrey = palette.secondary
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             IosDivider() // line above the due date and reminder
             Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

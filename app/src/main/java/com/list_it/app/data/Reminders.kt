@@ -58,10 +58,14 @@ object Reminders {
         null
     }.getOrElse { it.message ?: "Unable to schedule reminder" }
 
-    /** Removes a pending reminder (iOS `removePendingNotificationRequests`). */
+    /**
+     * Removes a pending reminder (iOS `removePendingNotificationRequests`). Clears the stored time
+     * too: left behind, task rows keep drawing the bell for a reminder that will never fire.
+     */
     fun cancel(taskID: String) {
         context.getSystemService(AlarmManager::class.java).cancel(pendingIntent(taskID, ""))
         savePending(pending() - taskID)
+        ReminderStore.remove(taskID)
     }
 
     /** The date of the task's pending reminder, if one is still waiting to fire. */

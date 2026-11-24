@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
+import com.list_it.app.model.CollectionLayout
 import com.list_it.app.model.ListDisplayStyle
 import com.list_it.app.model.SurfaceChoice
 
@@ -44,6 +45,13 @@ class Prefs(private val store: SharedPreferences) {
         get() = _displayStyle
         set(value) { _displayStyle = value; store.edit { putString(KEY_DISPLAY_STYLE, value.name.lowercase()) } }
 
+    private var _collectionLayout by mutableStateOf(
+        if (store.getString(KEY_COLLECTION_LAYOUT, null) == "expandable") CollectionLayout.EXPANDABLE else CollectionLayout.COLUMNS
+    )
+    var collectionLayout: CollectionLayout
+        get() = _collectionLayout
+        set(value) { _collectionLayout = value; store.edit { putString(KEY_COLLECTION_LAYOUT, value.name.lowercase()) } }
+
     /** Task reminders are delivered only while this is on (Settings -> Notifications). */
     private var _remindersEnabled by mutableStateOf(store.getBoolean(KEY_REMINDERS, true))
     var remindersEnabled: Boolean
@@ -69,6 +77,7 @@ class Prefs(private val store: SharedPreferences) {
         const val KEY_SURFACE_DARK = "surface.dark"
         const val KEY_SURFACE_LIGHT = "surface.light"
         const val KEY_DISPLAY_STYLE = "listDisplayStyle"
+        const val KEY_COLLECTION_LAYOUT = "collectionLayout"
         const val KEY_REMINDERS = "remindersEnabled"
         const val KEY_WHATS_NEW = "lastSeenWhatsNewVersion"
     }

@@ -10,6 +10,12 @@ enum class SortOption(val title: String) {
 
 enum class ListDisplayStyle { CARD, LIST }
 
+/** How a list's collections are laid out inside List Detail (Settings -> Appearance). */
+enum class CollectionLayout(val title: String, val hint: String) {
+    COLUMNS("Columns", "Swipe sideways through full-height collections"),
+    EXPANDABLE("Expandable", "Stacked cards that open one at a time"),
+}
+
 sealed interface VerificationStatus {
     data object Pending : VerificationStatus
     data object Verified : VerificationStatus

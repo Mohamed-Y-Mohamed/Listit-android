@@ -222,6 +222,10 @@ class SupabaseTest {
         assertTrue(Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}").matches(savedList["created_at"]!!.jsonPrimitive.content))
         assertEquals("General", server.tables["collection"]!!.single()["collection_name"]!!.jsonPrimitive.content)
 
+        // Both saves reach local state on their own, so a new list shows without a refetch.
+        assertEquals("Home", db.lists.single().listName)
+        assertEquals("General", db.collections.single().collectionName)
+
         assertTrue(db.fetchUserLists()); assertTrue(db.fetchUserCollections())
         assertTrue(db.updateList(db.lists.single(), "House", "#FF9500"))
         assertEquals("House", db.lists.single().listName)
@@ -280,7 +284,8 @@ class SupabaseTest {
         val row = server.tables["task"]!!.single()
         assertEquals(acc.id, row["user_id"]!!.jsonPrimitive.content)
         assertEquals("2026-05-01T09:30:00Z", row["due_date"]!!.jsonPrimitive.content)
-        db.tasks = db.tasks + t
+        // saveTask owns the local state update, and stores the row it actually inserted.
+        assertEquals(acc.id, db.tasks.single().userID)
 
         assertTrue(db.updateTask(t, "Renamed", "Desc", null, true))
         with(db.tasks.single()) { assertEquals("Renamed", text); assertNull(dueDate); assertTrue(isPinned) }
@@ -308,9 +313,10 @@ class SupabaseTest {
 
     @Test
     fun noteLifecycle() = runBlocking {
-        signedIn()
+        val acc = signedIn()
         val n = note("n1", "c1")
-        assertTrue(db.saveNote(n)); db.notes = db.notes + n
+        // saveNote owns the local state update, and stores the row it actually inserted.
+        assertTrue(db.saveNote(n)); assertEquals(acc.id, db.notes.single().userID)
         assertTrue(db.updateNote(n, "Title 2", "Body", "#FF0000", true))
         with(db.notes.single()) { assertEquals("Title 2", title); assertEquals("#FF0000", bgColorHex); assertTrue(isPinned) }
         assertTrue(db.updatePinForNote(db.notes.single(), false)); assertFalse(db.notes.single().isPinned)

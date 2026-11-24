@@ -21,8 +21,8 @@ android {
         applicationId = "com.list_it.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.4.0"
+        versionCode = 18
+        versionName = "1.8.0"
 
         buildConfigField("String", "SUPABASE_URL", "\"${property("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_KEY", "\"${property("SUPABASE_KEY")}\"")
@@ -83,6 +83,7 @@ if (!keystoreFile.exists() && !hasInjectedSigning) {
 }
 
 dependencies {
+    implementation(libs.material3)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(platform(libs.compose.bom))

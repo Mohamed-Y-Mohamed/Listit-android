@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
@@ -28,8 +29,10 @@ import com.list_it.app.ui.components.SheetHeader
 import com.list_it.app.ui.screens.collection.CollectionPickerRow
 import com.list_it.app.ui.components.AIGenerateButton
 import com.list_it.app.ui.components.BarButton
+import com.list_it.app.ui.components.BarIconButton
 import com.list_it.app.ui.components.ColorInputView
 import com.list_it.app.ui.components.DescriptionEditor
+import com.list_it.app.ui.components.GuardSheetDismiss
 import com.list_it.app.ui.components.IosAlert
 import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
@@ -46,16 +49,20 @@ import java.util.UUID
 
 /** The form for adding a new note: title, text, colour, and which collection it goes in. */
 @Composable
-fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
+fun ColumnScope.AddNoteSheet(list: TodoList, initialCollectionID: String? = null, dismiss: () -> Unit) {
     val db = LocalDb.current
     val scope = rememberCoroutineScope()
     var noteTitle by remember { mutableStateOf("") }
     var noteDescription by remember { mutableStateOf("") }
-    var selectedCollectionID by remember { mutableStateOf<String?>(null) }
+    // Pre-selected when opened from a collection's empty state, so the note lands where it was asked for.
+    var selectedCollectionID by remember { mutableStateOf(initialCollectionID) }
     var isPinned by remember { mutableStateOf(false) }
     var selectedColorHex by remember { mutableStateOf("") }
     var showAlert by remember { mutableStateOf(false) }
     var showAIView by remember { mutableStateOf(false) }
+
+    // A drag or scrim dismiss confirms first once anything has been typed or toggled.
+    GuardSheetDismiss(noteTitle.isNotBlank() || noteDescription.isNotBlank() || isPinned || selectedColorHex.isNotEmpty())
 
     /** Checks the note has a title, then saves it. */
     fun createNote() {
@@ -73,16 +80,13 @@ fun ColumnScope.AddNoteSheet(list: TodoList, dismiss: () -> Unit) {
             collectionID = target?.id.orEmpty(), userID = "", listID = list.id,
         )
         scope.launch {
-            if (db.saveNote(newNote)) {
-                db.notes = db.notes + newNote
-                dismiss()
-            } else showAlert = true
+            if (db.saveNote(newNote)) dismiss() else showAlert = true
         }
     }
 
     IosTopBar(
         "New Note",
-        leading = { BarButton("Dismiss", onClick = dismiss) },
+        leading = { BarIconButton(Icons.Filled.Close, "Dismiss", onClick = dismiss) },
         trailing = { BarButton("Create", bold = true) { createNote() } },
     )
     Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {

@@ -52,6 +52,8 @@ import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TableRows
 import androidx.compose.material.icons.outlined.VerifiedUser
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -89,6 +91,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.data.PasswordRules
+import com.list_it.app.model.CollectionLayout
 import com.list_it.app.model.ListDisplayStyle
 import com.list_it.app.model.SurfaceChoice
 import com.list_it.app.ui.LocalDb
@@ -180,9 +183,11 @@ fun SettingsScreen() {
 
 // ---------- Building blocks ----------
 
-@Composable private fun strong() = if (LocalPalette.current.isDark) Color.White else WebColor.gray900
-@Composable private fun muted() = if (LocalPalette.current.isDark) WebColor.gray400 else WebColor.gray500
-@Composable private fun label() = if (LocalPalette.current.isDark) WebColor.gray300 else Color(0xFF374151)
+// Settings used the web app's grey ramp, which sat well short of the page's text colour.
+// These now follow the theme, so every label reads at the same weight as the rest of the app.
+@Composable private fun strong() = LocalPalette.current.primary
+@Composable private fun muted() = LocalPalette.current.secondary
+@Composable private fun label() = LocalPalette.current.secondary
 
 /** A settings section that opens and closes when you tap its heading. */
 @Composable
@@ -200,9 +205,9 @@ private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit,
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(section.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = strong(), maxLines = 1)
-                Text(section.description, fontSize = 12.sp, color = WebColor.gray500, maxLines = 1)
+                Text(section.description, fontSize = 12.sp, color = muted(), maxLines = 1)
             }
-            Icon(Icons.Outlined.KeyboardArrowDown, null, tint = if (palette.isDark) WebColor.gray500 else WebColor.gray400, modifier = Modifier.size(18.dp).rotate(chevron))
+            Icon(Icons.Outlined.KeyboardArrowDown, null, tint = muted(), modifier = Modifier.size(18.dp).rotate(chevron))
         }
         AnimatedVisibility(isOpen, enter = expandVertically(tween(200)) + fadeIn(tween(200)), exit = shrinkVertically(tween(200)) + fadeOut(tween(200))) {
             Column {
@@ -218,7 +223,7 @@ private fun SectionCard(section: Section, isOpen: Boolean, onToggle: () -> Unit,
 private fun SectionHeading(title: String, subtitle: String) {
     Column {
         Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = strong())
-        Text(subtitle, fontSize = 14.sp, color = if (LocalPalette.current.isDark) WebColor.gray400 else Color(0xFF4B5563), modifier = Modifier.padding(top = 4.dp))
+        Text(subtitle, fontSize = 14.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -240,9 +245,9 @@ private fun LinkRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = titleColor)
-            Text(subtitle, fontSize = 12.sp, color = WebColor.gray500)
+            Text(subtitle, fontSize = 12.sp, color = muted())
         }
-        if (external) Icon(Icons.AutoMirrored.Outlined.OpenInNew, null, tint = if (palette.isDark) WebColor.gray500 else WebColor.gray400, modifier = Modifier.size(16.dp))
+        if (external) Icon(Icons.AutoMirrored.Outlined.OpenInNew, null, tint = muted(), modifier = Modifier.size(16.dp))
     }
 }
 
@@ -280,7 +285,7 @@ private fun InputField(
     var reveal by remember { mutableStateOf(false) }
     Row(Modifier.fieldBox(focused, error), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text(placeholder, fontSize = 16.sp, color = WebColor.gray400)
+            if (value.isEmpty()) Text(placeholder, fontSize = 16.sp, color = palette.tertiary)
             BasicTextField(
                 value, onChange, enabled = enabled, singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = strong()),
@@ -293,7 +298,7 @@ private fun InputField(
         if (password) {
             Icon(
                 if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, if (reveal) "Hide password" else "Show password",
-                tint = WebColor.gray400, modifier = Modifier.padding(start = 8.dp).size(20.dp).clickable { reveal = !reveal },
+                tint = muted(), modifier = Modifier.padding(start = 8.dp).size(20.dp).clickable { reveal = !reveal },
             )
         }
     }
@@ -392,11 +397,11 @@ private fun ProfileSection(show: (Boolean, String) -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                "Read-only", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = if (palette.isDark) WebColor.gray300 else Color(0xFF4B5563),
+                "Read-only", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = muted(),
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (palette.isDark) palette.ramp.raised else Color(0xFFF3F4F6)).padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
-        Text("Email address cannot be changed", fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(top = 4.dp))
+        Text("Email address cannot be changed", fontSize = 12.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
     Column {
         FieldLabel("Full Name")
@@ -461,35 +466,58 @@ private fun AppearanceSection() {
         }
         Text(
             if (isDark) "Applies to dark mode. Light mode keeps its own choice." else "Applies to light mode. Dark mode keeps its own choice.",
-            fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+            fontSize = 12.sp, color = muted(), modifier = Modifier.padding(start = 4.dp, top = 8.dp),
         )
     }
 
     // List layout (Android only in the web app).
+    OptionGroup(
+        "List layout",
+        listOf(
+            RadioOption(ListDisplayStyle.CARD, "Cards", "A two-column grid", Icons.Outlined.GridView),
+            RadioOption(ListDisplayStyle.LIST, "List", "One full-width row each", Icons.Outlined.TableRows),
+        ),
+        selected = prefs.displayStyle,
+    ) { prefs.displayStyle = it }
+
+    // How a list's collections are laid out inside List Detail.
+    OptionGroup(
+        "Collection layout",
+        CollectionLayout.entries.map {
+            RadioOption(it, it.title, it.hint, if (it == CollectionLayout.COLUMNS) Icons.Outlined.ViewColumn else Icons.Outlined.ViewAgenda)
+        },
+        selected = prefs.collectionLayout,
+    ) { prefs.collectionLayout = it }
+}
+
+private data class RadioOption<T>(val value: T, val title: String, val hint: String, val icon: ImageVector)
+
+/** A titled group of single-choice rows, as the web app's radio lists. */
+@Composable
+private fun <T> OptionGroup(title: String, options: List<RadioOption<T>>, selected: T, onSelect: (T) -> Unit) {
+    val palette = LocalPalette.current
+    val isDark = palette.isDark
+    val divider = if (isDark) palette.ramp.border else Color(0xFFE5E7EB)
     Column {
-        Text("List layout", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong(), modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong(), modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         val shape = RoundedCornerShape(8.dp)
-        Column(Modifier.fillMaxWidth().clip(shape).background(palette.ramp.raised).border(1.dp, if (isDark) palette.ramp.border else Color(0xFFE5E7EB), shape)) {
-            listOf(
-                Triple(ListDisplayStyle.CARD, "Cards", "A two-column grid") to Icons.Outlined.GridView,
-                Triple(ListDisplayStyle.LIST, "List", "One full-width row each") to Icons.Outlined.TableRows,
-            ).forEachIndexed { index, (option, icon) ->
-                val (style, title, hint) = option
-                val selected = prefs.displayStyle == style
-                if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(if (isDark) palette.ramp.border else Color(0xFFE5E7EB)))
+        Column(Modifier.fillMaxWidth().clip(shape).background(palette.ramp.raised).border(1.dp, divider, shape)) {
+            options.forEachIndexed { index, option ->
+                val isSelected = option.value == selected
+                if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 44.dp)
-                        .semantics { role = Role.RadioButton; stateDescription = if (selected) "Selected" else "Not selected" }
-                        .clickable { prefs.displayStyle = style }.padding(16.dp),
+                        .semantics { role = Role.RadioButton; stateDescription = if (isSelected) "Selected" else "Not selected" }
+                        .clickable { onSelect(option.value) }.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(icon, null, tint = if (selected) palette.accent else muted(), modifier = Modifier.size(20.dp))
+                    Icon(option.icon, null, tint = if (isSelected) palette.accent else muted(), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong())
-                        Text(hint, fontSize = 14.sp, color = muted())
+                        Text(option.title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = strong())
+                        Text(option.hint, fontSize = 14.sp, color = muted())
                     }
-                    if (selected) Icon(Icons.Filled.CheckCircle, null, tint = palette.accent, modifier = Modifier.size(16.dp))
+                    if (isSelected) Icon(Icons.Filled.CheckCircle, null, tint = palette.accent, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -536,7 +564,7 @@ private fun SecuritySection(show: (Boolean, String) -> Unit) {
     Column {
         FieldLabel("New Password")
         InputField(new, { new = it }, "Enter new password", "New Password", password = true, enabled = !saving)
-        Text(PasswordRules.RULE, fontSize = 12.sp, color = WebColor.gray500, modifier = Modifier.padding(top = 4.dp))
+        Text(PasswordRules.RULE, fontSize = 12.sp, color = muted(), modifier = Modifier.padding(top = 4.dp))
     }
     Column {
         FieldLabel("Confirm New Password")

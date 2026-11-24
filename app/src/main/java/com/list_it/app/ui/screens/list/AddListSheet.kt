@@ -57,13 +57,7 @@ fun ColumnScope.AddListSheet(lists: List<TodoList>, dismiss: () -> Unit) {
         val newList = TodoList(listID, Instant.now(), "checklist", listName, false, selectedColorHex, "", false)
         val general = ListCollection(UUID.randomUUID().toString().uppercase(), Instant.now(), "General", selectedColorHex, listID, "")
         scope.launch {
-            if (!db.saveList(newList, general)) {
-                showAlert = true
-                return@launch
-            }
-            db.lists = db.lists + newList.copy(userId = db.currentUser?.id.orEmpty())
-            db.collections = db.collections + general.copy(userID = db.currentUser?.id.orEmpty())
-            dismiss()
+            if (db.saveList(newList, general)) dismiss() else showAlert = true
         }
     }
 

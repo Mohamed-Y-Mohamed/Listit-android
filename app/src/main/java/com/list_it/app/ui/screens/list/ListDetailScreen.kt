@@ -12,8 +12,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,20 +35,22 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.Folder
+// Both folder icons are used; the outlined one is aliased so `Icons.Filled.Folder` keeps its name.
+import androidx.compose.material.icons.outlined.Folder as FolderOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +58,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,7 +70,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.list_it.app.data.ReminderStore
 import com.list_it.app.model.AlertMode
+import com.list_it.app.model.CollectionLayout
 import com.list_it.app.model.ListCollection
 import com.list_it.app.model.Note
 import com.list_it.app.model.SortOption
@@ -81,6 +89,7 @@ import com.list_it.app.ui.Dates
 import com.list_it.app.ui.LocalDb
 import com.list_it.app.ui.screens.task.TaskInfoSheet
 import com.list_it.app.ui.screens.collection.UpdateCollectionSheet
+import com.list_it.app.ui.LocalPrefs
 import com.list_it.app.ui.components.AlertButton
 import com.list_it.app.ui.components.BackButton
 import com.list_it.app.ui.components.ContentUnavailable
@@ -92,8 +101,11 @@ import com.list_it.app.ui.components.IosDivider
 import com.list_it.app.ui.components.IosSheet
 import com.list_it.app.ui.components.IosTopBar
 import com.list_it.app.ui.components.MenuDivider
+import com.list_it.app.ui.components.AnchoredMenu
 import com.list_it.app.ui.components.MenuItem
+import com.list_it.app.ui.components.SubMenuItem
 import com.list_it.app.ui.components.SearchField
+import com.list_it.app.ui.components.TintedButton
 import com.list_it.app.ui.components.UnderlineTab
 import com.list_it.app.ui.components.diagonalSlicePath
 import com.list_it.app.ui.screens.collection.AddCollectionSheet
@@ -109,11 +121,18 @@ import com.list_it.app.ui.theme.colorFromHex
 import kotlinx.coroutines.launch
 import java.time.Instant
 
+/**
+ * An open create sheet. [collectionID] is the collection it was launched from, so the empty-state
+ * buttons drop the new task or note into the collection the user was looking at; null falls back
+ * to General, as the toolbar menu does.
+ */
+private data class CreateIn(val collectionID: String?)
+
 /** The page for one list: its collections, and the tasks and notes inside each one. */
 @Composable
 fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
-    var showAddTask by remember { mutableStateOf(false) }
-    var showAddNote by remember { mutableStateOf(false) }
+    var addTask by remember { mutableStateOf<CreateIn?>(null) }
+    var addNote by remember { mutableStateOf<CreateIn?>(null) }
     var showAddCollection by remember { mutableStateOf(false) }
     var showTaskInfo by remember { mutableStateOf(false) }
     var currentSort by remember { mutableStateOf(SortOption.OLDEST) }
@@ -128,10 +147,10 @@ fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
                     IconButton(onClick = { showTaskInfo = true }) { Icon(Icons.Outlined.Info, "Task Info", tint = MaterialTheme.colorScheme.primary) }
                     Box {
                         IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreHoriz, "More", tint = MaterialTheme.colorScheme.primary) }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            MenuItem("Add Task", Icons.Filled.Edit) { menuOpen = false; showAddTask = true }
-                            MenuItem("Add Note", Icons.AutoMirrored.Filled.Notes) { menuOpen = false; showAddNote = true }
-                            MenuItem("Add Collection", Icons.Outlined.Folder) { menuOpen = false; showAddCollection = true }
+                        AnchoredMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            MenuItem("Add Task", Icons.Filled.Edit) { menuOpen = false; addTask = CreateIn(null) }
+                            MenuItem("Add Note", Icons.AutoMirrored.Filled.Notes) { menuOpen = false; addNote = CreateIn(null) }
+                            MenuItem("Add Collection", Icons.Outlined.FolderOutline) { menuOpen = false; showAddCollection = true }
                             MenuDivider()
                             Text("Sort by", style = IosFont.footnote, color = LocalPalette.current.secondary, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                             SortOption.entries.forEach { option ->
@@ -145,23 +164,60 @@ fun ListDetailScreen(list: TodoList, onBack: () -> Unit) {
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             SearchField(searchText, { searchText = it }, "Search tasks & notes")
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                AllCollectionsView(list, currentSort, searchText)
-                Spacer(Modifier.height(24.dp))
-            }
+            AllCollectionsView(
+                list, currentSort, searchText,
+                onAddTask = { addTask = CreateIn(it) },
+                onAddNote = { addNote = CreateIn(it) },
+            )
         }
     }
 
-    if (showAddTask) IosSheet(onDismiss = { showAddTask = false }, dismissible = false) { dismiss -> AddTaskSheet(list, dismiss) }
-    if (showAddNote) IosSheet(onDismiss = { showAddNote = false }, dismissible = false) { dismiss -> AddNoteSheet(list, dismiss) }
+    addTask?.let { request ->
+        IosSheet(onDismiss = { addTask = null }) { dismiss -> AddTaskSheet(list, request.collectionID, dismiss) }
+    }
+    addNote?.let { request ->
+        IosSheet(onDismiss = { addNote = null }) { dismiss -> AddNoteSheet(list, request.collectionID, dismiss) }
+    }
     if (showAddCollection) IosSheet(onDismiss = { showAddCollection = false }, dismissible = false) { dismiss -> AddCollectionSheet(list, dismiss) }
     if (showTaskInfo) IosSheet(onDismiss = { showTaskInfo = false }) { dismiss -> TaskInfoSheet(dismiss) }
 }
 
-/** Every collection in this list, one card each. */
+/** Open tasks and live notes in one collection. */
+private data class CollectionCounts(val tasks: Int, val notes: Int)
+
+private val NoCounts = CollectionCounts(0, 0)
+
+/**
+ * Counts for every collection on screen, grouped once per change to the task and note lists.
+ * Counting inside each column instead walked all tasks and all notes per collection, on every
+ * recomposition, so a search keystroke cost collections x rows.
+ */
 @Composable
-private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchText: String) {
+private fun rememberCollectionCounts(): Map<String, CollectionCounts> {
     val db = LocalDb.current
+    val tasks = db.tasks
+    val notes = db.notes
+    return remember(tasks, notes) {
+        val open = tasks.asSequence()
+            .filter { !it.isCompleted && !it.isDeleted }
+            .groupingBy { it.collectionID }.eachCount()
+        val live = notes.asSequence()
+            .filter { !it.isDeleted }
+            .groupingBy { it.collectionID }.eachCount()
+        (open.keys + live.keys).associateWith { CollectionCounts(open[it] ?: 0, live[it] ?: 0) }
+    }
+}
+
+@Composable
+private fun ColumnScope.AllCollectionsView(
+    list: TodoList,
+    currentSort: SortOption,
+    searchText: String,
+    onAddTask: (String) -> Unit,
+    onAddNote: (String) -> Unit,
+) {
+    val db = LocalDb.current
+    val prefs = LocalPrefs.current
     val scope = rememberCoroutineScope()
     var showAlert by remember { mutableStateOf(false) }
     var alertMode by remember { mutableStateOf(AlertMode.ERROR) }
@@ -181,6 +237,7 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
         SortOption.ALPHABETICAL_AZ -> base.sortedBy { it.collectionName.lowercase() }
         SortOption.ALPHABETICAL_ZA -> base.sortedByDescending { it.collectionName.lowercase() }
     }
+    val counts = rememberCollectionCounts()
 
     /** Deletes whatever you chose to delete (a collection, task or note) after you confirm. */
     fun performDelete() = scope.launch {
@@ -197,7 +254,15 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    /** Update and delete, for whichever layout is showing. "General" cannot be edited. */
+    val collectionMenu: @Composable ColumnScope.(ListCollection, () -> Unit) -> Unit = { collection, close ->
+        MenuItem("Update Collection", Icons.Filled.Edit) { close(); selectedToUpdate = collection }
+        MenuItem("Delete Collection", Icons.Filled.Delete, destructive = true) {
+            close(); selectedToDelete = collection; alertMode = AlertMode.DELETE; showAlert = true
+        }
+    }
+
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
@@ -205,22 +270,21 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
         }
         if (filteredCollections.isEmpty()) {
             ContentUnavailable("No Collections", Icons.Filled.CreateNewFolder, description = "Add a collection to organize your tasks.", modifier = Modifier.padding(top = 40.dp))
-        } else {
-            Column {
+        } else when (prefs.collectionLayout) {
+            CollectionLayout.COLUMNS -> CollectionColumnsView(
+                filteredCollections, counts, searchText, onAddTask, onAddNote, collectionMenu,
+            )
+            CollectionLayout.EXPANDABLE -> Column(Modifier.verticalScroll(rememberScrollState())) {
                 filteredCollections.forEach { collection ->
                     val canEdit = collection.collectionName.lowercase() != "general"
                     ContextMenuBox(
                         modifier = Modifier.padding(vertical = 4.dp),
-                        menu = if (canEdit) { close ->
-                            MenuItem("Update Collection", Icons.Filled.Edit) { close(); selectedToUpdate = collection }
-                            MenuItem("Delete Collection", Icons.Filled.Delete, destructive = true) {
-                                close(); selectedToDelete = collection; alertMode = AlertMode.DELETE; showAlert = true
-                            }
-                        } else null,
+                        menu = if (canEdit) { close -> collectionMenu(collection, close) } else null,
                     ) {
-                        CollectionView(collection, searchText)
+                        CollectionView(collection, counts[collection.id] ?: NoCounts, searchText, onAddTask, onAddNote)
                     }
                 }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -238,9 +302,109 @@ private fun AllCollectionsView(list: TodoList, currentSort: SortOption, searchTe
     }
 }
 
-/** A collection's card. Tap the header to open or close it and see its tasks and notes. */
+// MARK: - Columns layout
+
+/**
+ * Collections side by side, one nearly-full-width column each, snapping as it scrolls
+ * (iOS `ScrollView(.horizontal)` + `.scrollTargetBehavior(.viewAligned)`).
+ */
 @Composable
-private fun CollectionView(collection: ListCollection, searchText: String) {
+private fun CollectionColumnsView(
+    collections: List<ListCollection>,
+    counts: Map<String, CollectionCounts>,
+    searchText: String,
+    onAddTask: (String) -> Unit,
+    onAddNote: (String) -> Unit,
+    menu: @Composable ColumnScope.(ListCollection, () -> Unit) -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // A sliver of the next column stays in view, so it reads as scrollable.
+        val columnWidth = maxOf(260.dp, maxWidth - 48.dp)
+        val pager = rememberPagerState { collections.size }
+        HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxSize(),
+            pageSize = PageSize.Fixed(columnWidth),
+            pageSpacing = 12.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+        ) { page ->
+            val collection = collections[page]
+            val canEdit = collection.collectionName.lowercase() != "general"
+            ContextMenuBox(
+                modifier = Modifier.fillMaxSize().padding(bottom = 16.dp),
+                menu = if (canEdit) { close -> menu(collection, close) } else null,
+            ) {
+                CollectionColumn(collection, counts[collection.id] ?: NoCounts, searchText, onAddTask, onAddNote)
+            }
+        }
+    }
+}
+
+/** One full-height collection card (iOS `CollectionColumnView`). */
+@Composable
+private fun CollectionColumn(
+    collection: ListCollection,
+    counts: CollectionCounts,
+    searchText: String,
+    onAddTask: (String) -> Unit,
+    onAddNote: (String) -> Unit,
+) {
+    val palette = LocalPalette.current
+    val color = colorFromHex(collection.bgColorHex)
+    val shape = RoundedCornerShape(20.dp)
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(palette.secondaryGroupedBackground)
+            .border(1.dp, color.copy(alpha = 0.22f), shape),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    collection.collectionName,
+                    style = IosFont.title3.copy(fontWeight = FontWeight.Bold),
+                    color = palette.primary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
+                Text("${counts.tasks} Tasks · ${counts.notes} Notes", style = IosFont.caption, color = palette.secondary)
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Filled.Folder, null, tint = color, modifier = Modifier.size(20.dp))
+        }
+
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            listOf("Tasks", "Notes").forEachIndexed { index, title ->
+                UnderlineTab(
+                    title, selectedTab == index, color,
+                    spacing = 7.dp, indicatorHeight = 3.dp, capsule = true,
+                ) { selectedTab = index }
+            }
+        }
+        IosDivider()
+
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (selectedTab == 0) {
+                TaskListView(collection, searchText) { onAddTask(collection.id) }
+            } else {
+                NoteListView(collection, searchText) { onAddNote(collection.id) }
+            }
+        }
+    }
+}
+
+// MARK: - Expandable layout
+
+/** Expandable collection card (iOS `CollectionView` + `CollectionHeader`). */
+@Composable
+private fun CollectionView(
+    collection: ListCollection,
+    counts: CollectionCounts,
+    searchText: String,
+    onAddTask: (String) -> Unit,
+    onAddNote: (String) -> Unit,
+) {
     var isExpandedState by remember { mutableStateOf(false) }
     val isExpanded = searchText.isNotEmpty() || isExpandedState
     val palette = LocalPalette.current
@@ -275,11 +439,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
                     val w = size.width * highlightWidth
                     drawPath(
                         diagonalSlicePath(Size(w, size.height), skew.dp.toPx()),
-                        Brush.horizontalGradient(
-                            // Stronger tint so each collection's colour is easy to see.
-                            listOf(color.copy(alpha = if (isDark) 0.65f else 0.42f), color.copy(alpha = if (isDark) 0.38f else 0.22f)),
-                            endX = w,
-                        ),
+                        SolidColor(color.copy(alpha = if (isDark) 0.25f else 0.16f)),
                     )
                 }
                 .clickable { isExpandedState = !isExpanded }
@@ -287,7 +447,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
                 .padding(start = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CollectionDetailView(collection, Modifier.weight(1f))
+            CollectionDetailView(collection, counts, Modifier.weight(1f))
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = color,
                 modifier = Modifier.padding(end = 16.dp).rotate(chevron),
@@ -295,7 +455,7 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
         }
         AnimatedVisibility(isExpanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Box(Modifier.background(if (isDark) Color.Black.copy(alpha = 0.12f) else palette.groupedBackground.copy(alpha = 0.3f)).padding(start = 12.dp, top = 14.dp, bottom = 12.dp)) {
-                CollectionTabView(collection, searchText)
+                CollectionTabView(collection, searchText, onAddTask, onAddNote)
             }
         }
     }
@@ -303,31 +463,36 @@ private fun CollectionView(collection: ListCollection, searchText: String) {
 
 /** The open part of a collection card: its Tasks and Notes tabs. */
 @Composable
-private fun CollectionDetailView(collection: ListCollection, modifier: Modifier) {
-    val db = LocalDb.current
+private fun CollectionDetailView(collection: ListCollection, counts: CollectionCounts, modifier: Modifier) {
     val palette = LocalPalette.current
-    val totalTasks = db.tasks.count { it.collectionID == collection.id && !it.isCompleted }
-    val totalNotes = db.notes.count { it.collectionID == collection.id }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(collection.collectionName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = palette.primary)
-        Text("$totalTasks Tasks · $totalNotes Notes", style = IosFont.caption, color = palette.secondary)
+        Text("${counts.tasks} Tasks · ${counts.notes} Notes", style = IosFont.caption, color = palette.secondary)
     }
 }
 
 /** Switches between the Tasks tab and the Notes tab inside a collection. */
 @Composable
-private fun CollectionTabView(collection: ListCollection, searchText: String) {
-    val pager = rememberPagerState { 2 }
-    val scope = rememberCoroutineScope()
+private fun CollectionTabView(
+    collection: ListCollection,
+    searchText: String,
+    onAddTask: (String) -> Unit,
+    onAddNote: (String) -> Unit,
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
     val color = colorFromHex(collection.bgColorHex)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             listOf("Tasks", "Notes").forEachIndexed { index, title ->
-                UnderlineTab(title, pager.currentPage == index, color) { scope.launch { pager.animateScrollToPage(index) } }
+                UnderlineTab(title, selectedTab == index, color) { selectedTab = index }
             }
         }
-        HorizontalPager(pager, Modifier.fillMaxWidth().height(300.dp)) { page ->
-            if (page == 0) TaskListView(collection, searchText) else NoteListView(collection, searchText)
+        Box(Modifier.fillMaxWidth().height(300.dp)) {
+            if (selectedTab == 0) {
+                TaskListView(collection, searchText) { onAddTask(collection.id) }
+            } else {
+                NoteListView(collection, searchText) { onAddNote(collection.id) }
+            }
         }
     }
 }
@@ -336,7 +501,7 @@ private fun CollectionTabView(collection: ListCollection, searchText: String) {
 
 /** The tasks inside a collection, filtered by the search box. */
 @Composable
-private fun TaskListView(collection: ListCollection, searchText: String) {
+private fun TaskListView(collection: ListCollection, searchText: String, onCreate: () -> Unit) {
     val db = LocalDb.current
     val scope = rememberCoroutineScope()
     var selectedTask by remember { mutableStateOf<ToDoTask?>(null) }
@@ -349,7 +514,11 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
         .sortedWith(compareByDescending<ToDoTask> { it.isPinned }.thenByDescending { it.createdAt })
 
     if (filteredTasks.isEmpty()) {
-        ContentUnavailable("No Tasks", Icons.Outlined.EditNote, description = "Try adding a Task to this Collection.")
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            ContentUnavailable("No Tasks", Icons.Outlined.EditNote, description = "Try adding a Task to this Collection.") {
+                TintedButton("Create Task", Icons.Filled.Add, MaterialTheme.colorScheme.primary, prominent = true, onClick = onCreate)
+            }
+        }
     } else {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             filteredTasks.forEach { task ->
@@ -381,7 +550,7 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
     }
 
     selectedTask?.let { task ->
-        IosSheet(onDismiss = { selectedTask = null }, dismissible = false) { dismiss -> TaskDetailSheet(task, dismiss) }
+        IosSheet(onDismiss = { selectedTask = null }) { dismiss -> TaskDetailSheet(task, dismiss) }
     }
     if (showAlert) {
         if (alertMode == AlertMode.DELETE) {
@@ -404,13 +573,9 @@ private fun TaskListView(collection: ListCollection, searchText: String) {
 /** The "Move to…" menu: shows the other collections in this list so you can move an item there. */
 @Composable
 private fun MoveMenu(collections: List<ListCollection>, currentID: String, title: String, onMove: (ListCollection) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        MenuItem(title, Icons.Filled.DriveFileMove) { open = true }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            collections.forEach { c ->
-                MenuItem(c.collectionName, enabled = c.id != currentID, checked = c.id == currentID) { open = false; onMove(c) }
-            }
+    SubMenuItem(title, Icons.Filled.DriveFileMove) {
+        collections.forEach { c ->
+            MenuItem(c.collectionName, enabled = c.id != currentID, checked = c.id == currentID) { onMove(c) }
         }
     }
 }
@@ -461,7 +626,7 @@ private fun TaskView(task: ToDoTask) {
 
 /** The notes inside a collection, filtered by the search box. */
 @Composable
-private fun NoteListView(collection: ListCollection, searchText: String) {
+private fun NoteListView(collection: ListCollection, searchText: String, onCreate: () -> Unit) {
     val db = LocalDb.current
     val scope = rememberCoroutineScope()
     var selectedNote by remember { mutableStateOf<Note?>(null) }
@@ -474,7 +639,11 @@ private fun NoteListView(collection: ListCollection, searchText: String) {
         .sortedWith(compareByDescending<Note> { it.isPinned }.thenByDescending { it.createdAt })
 
     if (filteredNotes.isEmpty()) {
-        ContentUnavailable("No Notes", Icons.AutoMirrored.Filled.Notes, description = "Try adding a Note to this Collection.")
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            ContentUnavailable("No Notes", Icons.AutoMirrored.Filled.Notes, description = "Try adding a Note to this Collection.") {
+                TintedButton("Create Note", Icons.Filled.Add, MaterialTheme.colorScheme.primary, prominent = true, onClick = onCreate)
+            }
+        }
     } else {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
@@ -508,7 +677,7 @@ private fun NoteListView(collection: ListCollection, searchText: String) {
     }
 
     selectedNote?.let { note ->
-        IosSheet(onDismiss = { selectedNote = null }, dismissible = false) { dismiss -> NoteDetailSheet(note, dismiss) }
+        IosSheet(onDismiss = { selectedNote = null }) { dismiss -> NoteDetailSheet(note, dismiss) }
     }
     if (showAlert) {
         if (alertMode == AlertMode.DELETE) {
@@ -541,7 +710,7 @@ private fun NoteView(note: Note) {
                 .fillMaxSize()
                 .shadow(3.dp, shape, ambientColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.12f), spotColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.12f))
                 .background(palette.systemBackground, shape)
-                .background(Brush.linearGradient(listOf(color.copy(alpha = if (isDark) 0.50f else 0.40f), color.copy(alpha = if (isDark) 0.28f else 0.20f))), shape)
+                .background(color.copy(alpha = 0.08f), shape)
                 .border(0.8.dp, color.copy(alpha = 0.35f), shape)
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
